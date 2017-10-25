@@ -82,6 +82,10 @@ node * queue = NULL;
  */
 bool verbose_output = false;
 
+/* Only one file opened as main DB
+ * to prevent using this file pointer on every read/write, It became global
+ */
+FILE * dbfile = NULL;
 
 // FUNCTION DEFINITIONS.
 
@@ -103,7 +107,7 @@ void license_notice( void ) {
  */
 void print_license( int license_part ) {
     int start, end, line;
-    FILE * fp;
+    FILE * dbfile;
     char buffer[0x100];
 
     switch(license_part) {
@@ -119,18 +123,18 @@ void print_license( int license_part ) {
         return;
     }
 
-    fp = fopen(LICENSE_FILE, "r");
-    if (fp == NULL) {
+    dbfile = fopen(LICENSE_FILE, "r");
+    if (dbfile == NULL) {
         perror("print_license: fopen");
         exit(EXIT_FAILURE);
     }
     for (line = 0; line < start; line++)
-        fgets(buffer, sizeof(buffer), fp);
+        fgets(buffer, sizeof(buffer), dbfile);
     for ( ; line < end; line++) {
-        fgets(buffer, sizeof(buffer), fp);
+        fgets(buffer, sizeof(buffer), dbfile);
         printf("%s", buffer);
     }
-    fclose(fp);
+    fclose(dbfile);
 }
 
 
@@ -1231,5 +1235,83 @@ void destroy_tree_nodes(node * root) {
 node * destroy_tree(node * root) {
     destroy_tree_nodes(root);
     return NULL;
+}
+
+
+//under here, my funtions
+/*
+ * these code is in bpt.h
+#define FIRST_ASSIGNE_PAGE_NUM  16
+#define PAGE_SIZE               4096                  
+#define RECORD_SIZE             256     
+#define TO_NEXT_FREE_PAGE_OFFSET 0      // Header   | Free    use it
+#define TO_PARENT_PAGE_OFFSET    0      // Internal | Leaf
+#define TO_ROOT_PAGE_OFFSET      8      // Header
+#define To_IS_LEAF               8      // Internal | Leaf
+#define TO_NUM_OF_KEYS           12     // Internal | Leaf
+#define TO_RIGHT_SIBLING_OFFSET  120    // Leaf
+#define TO_KEYS                  128    // Leaf
+#define TO_VALUES                136    // Leaf
+#define TO_LEFT_CHILD_OFFSET     120
+*/
+typedef unsigned long Offset;
+
+void SetNextFreePage(Offset node_offset, Offset value){
+    fseek(dbfile, node_offset + TO_NEXT_FREE_PAGE_OFFSET, SEEK_SET);
+    int result =fwrite(&value, sizeof(Offset), 1, dbfile);
+    if (result != 1)
+        printf("ERROR from SetNextPage(node=%ul, val=%ul)",
+            (unsigned int)node_offset, (unsigned int)value);
+}
+Offset GetNextFreePage(Offset node_offset){
+    Offset value[1];
+    fseek(dbfile, node_offset + TO_NEXT_FREE_PAGE_OFFSET, SEEK_SET);
+    int result;
+    for(result = 0; result < 1; result += fread(value, sizeof(Offset), 1, dbfile)){
+        if (result < 0){
+            printf("ERROR: GetNextPage(node=%u) ... return %u\n",
+                (unsigned int) node_offset, (unsigned int) value[0]);
+            break;
+        }
+    }
+    
+    return value[0];
+}
+
+void FileInit(FILE* dbfile){
+    char header_page[PAGE_SIZE];
+    char free_page[PAGE_SIZE];
+    char root_page[PAGE_SIZE];  //make it leaf
+    int i;
+    for(i = 0; i < PAGE_SIZE; i++){
+        header_page[i] = 0;
+        root_page[i] = 0;
+        free_page[i] = 0;
+    }
+
+    
+/*    i = 0;
+    Offset * free_page_offset = (Offset*) header_page + (sizeof(Offset) * (i++) );
+    Offset * root_page_offset = (Offset*) header_page + (sizeof(Offset) * (i++) );
+    Offset *page_count_offset = (Offset*) header_page + (sizeof(Offset) * (i++) );
+
+    *free_page_offset = PAGE_SIZE * 2;
+    *root_page_offset = PAGE_SIZE * 1;
+    *page_count_offset= FIRST_ASSIGNE_PAGE_NUM;
+*/
+
+    
+    /*
+    for( ; i < FIRST_ASSIGNE_PAGE_NUM; i++){
+        WriteAt(dbfile, PAGE_SIZE * (i), free_page, PAGE_SIZE);
+    }*/
+    for(i = 1; i <= 3; i++){
+        Offset result = GetNextFreePage(0);
+        printf("debug|header's nextfree : 0x%x, now I will insert %d\n",
+            (unsigned int)result, i);
+        SetNextFreePage(0, i);
+    }
+    fclose(dbfile);
+    exit(1);
 }
 

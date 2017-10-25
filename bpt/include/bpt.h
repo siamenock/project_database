@@ -13,12 +13,12 @@
 #endif
 
 // Default order is 4.
-#define DEFAULT_ORDER 4
+#define DEFAULT_ORDER 32
 
 // Minimum order is necessarily 3.  We set the maximum
 // order arbitrarily.  You may change the maximum order.
 #define MIN_ORDER 3
-#define MAX_ORDER 20
+#define MAX_ORDER 32
 
 // Constants for printing part or all of the GPL license.
 #define LICENSE_FILE "LICENSE.txt"
@@ -28,6 +28,23 @@
 #define LICENSE_CONDITIONS 1
 #define LICENSE_CONDITIONS_START 70
 #define LICENSE_CONDITIONS_END 625
+
+
+// Constants for DB file
+#define FIRST_ASSIGNE_PAGE_NUM  16
+#define PAGE_SIZE               4096                  
+#define RECORD_SIZE             256     
+#define TO_NEXT_FREE_PAGE_OFFSET 0      // Header   | Free    use it
+#define TO_PARENT_PAGE_OFFSET    0      // Internal | Leaf
+#define TO_ROOT_PAGE_OFFSET      8      // Header
+#define To_IS_LEAF               8      // Internal | Leaf
+#define TO_NUM_OF_KEYS           12     // Internal | Leaf
+#define TO_RIGHT_SIBLING_OFFSET  120    // Leaf
+#define TO_KEYS                  128    // Leaf
+#define TO_VALUES                136    // Leaf
+#define TO_LEFT_CHILD_OFFSET     120
+
+
 
 // TYPES.
 
@@ -111,6 +128,12 @@ extern node * queue;
 extern bool verbose_output;
 
 
+
+/* Only one file opened as main DB
+ * to prevent using this file pointer on every read/write, It became global
+ */
+extern FILE* dbfile;
+
 // FUNCTION PROTOTYPES.
 
 // Output and utility.
@@ -167,5 +190,9 @@ node * delete( node * root, int key );
 
 void destroy_tree_nodes(node * root);
 node * destroy_tree(node * root);
+
+
+//under here, my funtions
+void FileInit(FILE* fp);
 
 #endif /* __BPT_H__*/

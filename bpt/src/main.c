@@ -1,61 +1,97 @@
+#include <string.h>
 #include "bpt.h"
 
 // MAIN
 
-int main( int argc, char ** argv ) {
 
-    char * input_file;
-    FILE * fp;
+
+int main( int argc, char ** argv ) {
+    char input_file[64];
+    char cmd[128];
     node * root;
     int input, range2;
     char instruction;
     char license_part;
-
+    char buffer[] = "asdf";
     root = NULL;
     verbose_output = false;
 
-    if (argc > 1) {
-        order = atoi(argv[1]);		//global int order 
-        if (order < MIN_ORDER || order > MAX_ORDER) {
-            fprintf(stderr, "Invalid order: %d .\n\n", order);
-            usage_3();
-            exit(EXIT_FAILURE);
+    // dbfile is global var. only 1 File used now
+    dbfile = fopen("this_is_sample_file", "w");
+    fwrite(buffer, sizeof(char), sizeof(buffer), dbfile);
+    fclose(dbfile);
+
+    
+    //----------------------------------------------------------//
+    //                      presetting part                     //
+    //----------------------------------------------------------//
+    //printf("preset > ");
+    while(scanf("%s", cmd)) {
+        printf("debug|scanf : %s\n", cmd);
+        if(strcmp(cmd, "open") == 0){    //TODO: change into cmd_pre array and switch
+            scanf("%s", input_file);
+            printf("debug|filename : %s\n", input_file);
+            dbfile = fopen(input_file, "r+");
+            if (dbfile == NULL) {
+                dbfile = fopen(input_file, "w");
+                if (dbfile == NULL) {
+                    perror("Failure  open input file.");
+                    exit(EXIT_FAILURE);
+                } else {
+                    FileInit(dbfile);
+                    printf("file not found. opening NEW FILE\n");
+                    break;
+                }
+            } else {
+                printf("opening EXISTING FILE\n");
+                break;
+            }
+        } else {
+            printf ("cmd on presetting step\n\topen FILE_PATH\n");
+            continue;
         }
     }
 
-    license_notice();
-    usage_1();  
-    usage_2();
-
-    if (argc > 2) {
-        input_file = argv[2];
-        fp = fopen(input_file, "r");
-        if (fp == NULL) {
-            perror("Failure  open input file.");
-            exit(EXIT_FAILURE);
-        }
-        while (!feof(fp)) {
-            fscanf(fp, "%d\n", &input);
-            root = insert(root, input, input);
-        }
-        fclose(fp);
-        print_tree(root);
-    }
+    //----------------------------------------------------------//
+    //                         main loop                        //
+    //----------------------------------------------------------//    
+    enum{
+        INSERT = 0,
+        FIND,
+        DELETE,
+        OPERATION_COUNT 
+    };
+    int op = OPERATION_COUNT;
+    const char * op_string[3];   //operation string used by user
+    op_string[INSERT]   = "insert";
+    op_string[FIND]     = "find";
+    op_string[DELETE]   = "delete";
 
     printf("> ");
-    while (scanf("%c", &instruction) != EOF) {
-        switch (instruction) {
-        case 'd':
+    while (scanf("%s", cmd) != EOF) {
+        for(op = 0; op < OPERATION_COUNT; op++){
+            if(strcmp(cmd, op_string[op]) == 0){ //if find operation string
+                break;                           //now, op == INSERT||FIND||DELETE||...
+            }
+        }
+        switch (op) {
+        case DELETE:
             scanf("%d", &input);
             root = delete(root, input);
             print_tree(root);
             break;
-        case 'i':
+        case INSERT:
             scanf("%d", &input);
             root = insert(root, input, input);
             print_tree(root);
             break;
-        case 'f':
+        case FIND:
+            break;
+        case OPERATION_COUNT:   //DEFAULT
+            //usage_2();
+            printf("your input : %s\nusage is wrong\n", cmd);
+            break;
+            /*
         case 'p':
             scanf("%d", &input);
             find_and_print(root, input, instruction == 'p');
@@ -87,9 +123,8 @@ int main( int argc, char ** argv ) {
                 root = destroy_tree(root);
             print_tree(root);
             break;
-        default:
-            usage_2();
-            break;
+            */
+        
         }
         while (getchar() != (int)'\n');
         printf("> ");
