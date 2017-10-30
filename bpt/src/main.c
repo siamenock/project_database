@@ -33,7 +33,7 @@ int main( int argc, char ** argv ) {
             printf("debug|filename : %s\n", input_file);
             dbfile = fopen(input_file, "r+");
             if (dbfile == NULL) {
-                dbfile = fopen(input_file, "w");
+                dbfile = fopen(input_file, "w+");
                 if (dbfile == NULL) {
                     perror("Failure  open input file.");
                     exit(EXIT_FAILURE);
@@ -77,13 +77,13 @@ int main( int argc, char ** argv ) {
         switch (op) {
         case DELETE:
             scanf("%d", &input);
-            root = delete(root, input);
-            print_tree(root);
+            //root = delete(root, input);
+            //print_tree(root);
             break;
         case INSERT:
             scanf("%d", &input);
-            root = insert(root, input, input);
-            print_tree(root);
+            //root = insert(root, input, input);
+            //print_tree(root);
             break;
         case FIND:
             break;

@@ -91,98 +91,6 @@ FILE * dbfile = NULL;
 
 // OUTPUT AND UTILITIES
 
-/* Copyright and license notice to user at startup. 
- */
-void license_notice( void ) {
-    printf("bpt version %s -- Copyright (C) 2010  Amittai Aviram "
-            "http://www.amittai.com\n", Version);
-    printf("This program comes with ABSOLUTELY NO WARRANTY; for details "
-            "type `show w'.\n"
-            "This is free software, and you are welcome to redistribute it\n"
-            "under certain conditions; type `show c' for details.\n\n");
-}
-
-
-/* Routine to print portion of GPL license to stdout.
- */
-void print_license( int license_part ) {
-    int start, end, line;
-    FILE * dbfile;
-    char buffer[0x100];
-
-    switch(license_part) {
-    case LICENSE_WARRANTEE:
-        start = LICENSE_WARRANTEE_START;
-        end = LICENSE_WARRANTEE_END;
-        break;
-    case LICENSE_CONDITIONS:
-        start = LICENSE_CONDITIONS_START;
-        end = LICENSE_CONDITIONS_END;
-        break;
-    default:
-        return;
-    }
-
-    dbfile = fopen(LICENSE_FILE, "r");
-    if (dbfile == NULL) {
-        perror("print_license: fopen");
-        exit(EXIT_FAILURE);
-    }
-    for (line = 0; line < start; line++)
-        fgets(buffer, sizeof(buffer), dbfile);
-    for ( ; line < end; line++) {
-        fgets(buffer, sizeof(buffer), dbfile);
-        printf("%s", buffer);
-    }
-    fclose(dbfile);
-}
-
-
-/* First message to the user.
- */
-void usage_1( void ) {
-    printf("B+ Tree of Order %d.\n", order);
-    printf("Following Silberschatz, Korth, Sidarshan, Database Concepts, "
-           "5th ed.\n\n"
-           "To build a B+ tree of a different order, start again and enter "
-           "the order\n"
-           "as an integer argument:  bpt <order>  ");
-    printf("(%d <= order <= %d).\n", MIN_ORDER, MAX_ORDER);
-    printf("To start with input from a file of newline-delimited integers, \n"
-           "start again and enter the order followed by the filename:\n"
-           "bpt <order> <inputfile> .\n");
-}
-
-
-/* Second message to the user.
- */
-void usage_2( void ) {
-    printf("Enter any of the following commands after the prompt > :\n"
-    "\ti <k>  -- Insert <k> (an integer) as both key and value).\n"
-    "\tf <k>  -- Find the value under key <k>.\n"
-    "\tp <k> -- Print the path from the root to key k and its associated "
-           "value.\n"
-    "\tr <k1> <k2> -- Print the keys and values found in the range "
-            "[<k1>, <k2>\n"
-    "\td <k>  -- Delete key <k> and its associated value.\n"
-    "\tx -- Destroy the whole tree.  Start again with an empty tree of the "
-           "same order.\n"
-    "\tt -- Print the B+ tree.\n"
-    "\tl -- Print the keys of the leaves (bottom row of the tree).\n"
-    "\tv -- Toggle output of pointer addresses (\"verbose\") in tree and "
-           "leaves.\n"
-    "\tq -- Quit. (Or use Ctl-D.)\n"
-    "\t? -- Print this help message.\n");
-}
-
-
-/* Brief usage note.
- */
-void usage_3( void ) {
-    printf("Usage: ./bpt [<order>]\n");
-    printf("\twhere %d <= order <= %d .\n", MIN_ORDER, MAX_ORDER);
-}
-
 
 /* Helper function for printing the
  * tree out.  See print_tree.
@@ -276,156 +184,30 @@ int path_to_root( node * root, node * child ) {
 }
 
 
-/* Prints the B+ tree in the command
- * line in level (rank) order, with the 
- * keys in each node and the '|' symbol
- * to separate nodes.
- * With the verbose_output flag set.
- * the values of the pointers corresponding
- * to the keys also appear next to their respective
- * keys, in hexadecimal notation.
- */
-void print_tree( node * root ) {
-
-    node * n = NULL;
-    int i = 0;
-    int rank = 0;
-    int new_rank = 0;
-
-    if (root == NULL) {
-        printf("Empty tree.\n");
-        return;
-    }
-    queue = NULL;
-    enqueue(root);
-    while( queue != NULL ) {
-        n = dequeue();
-        if (n->parent != NULL && n == n->parent->pointers[0]) {
-            new_rank = path_to_root( root, n );
-            if (new_rank != rank) {
-                rank = new_rank;
-                printf("\n");
-            }
-        }
-        if (verbose_output) 
-            printf("(%lx)", (unsigned long)n);
-        for (i = 0; i < n->num_keys; i++) {
-            if (verbose_output)
-                printf("%lx ", (unsigned long)n->pointers[i]);
-            printf("%d ", n->keys[i]);
-        }
-        if (!n->is_leaf)
-            for (i = 0; i <= n->num_keys; i++)
-                enqueue(n->pointers[i]);
-        if (verbose_output) {
-            if (n->is_leaf) 
-                printf("%lx ", (unsigned long)n->pointers[order - 1]);
-            else
-                printf("%lx ", (unsigned long)n->pointers[n->num_keys]);
-        }
-        printf("| ");
-    }
-    printf("\n");
-}
-
-
-/* Finds the record under a given key and prints an
- * appropriate message to stdout.
- */
-void find_and_print(node * root, int key, bool verbose) {
-    record * r = find(root, key, verbose);
-    if (r == NULL)
-        printf("Record not found under key %d.\n", key);
-    else 
-        printf("Record at %lx -- key %d, value %d.\n",
-                (unsigned long)r, key, r->value);
-}
-
-
-/* Finds and prints the keys, pointers, and values within a range
- * of keys between key_start and key_end, including both bounds.
- */
-void find_and_print_range( node * root, int key_start, int key_end,
-        bool verbose ) {
-    int i;
-    int array_size = key_end - key_start + 1;
-    int returned_keys[array_size];
-    void * returned_pointers[array_size];
-    int num_found = find_range( root, key_start, key_end, verbose,
-            returned_keys, returned_pointers );
-    if (!num_found)
-        printf("None found.\n");
-    else {
-        for (i = 0; i < num_found; i++)
-            printf("Key: %d   Location: %lx  Value: %d\n",
-                    returned_keys[i],
-                    (unsigned long)returned_pointers[i],
-                    ((record *)
-                     returned_pointers[i])->value);
-    }
-}
-
-
-/* Finds keys and their pointers, if present, in the range specified
- * by key_start and key_end, inclusive.  Places these in the arrays
- * returned_keys and returned_pointers, and returns the number of
- * entries found.
- */
-int find_range( node * root, int key_start, int key_end, bool verbose,
-        int returned_keys[], void * returned_pointers[]) {
-    int i, num_found;
-    num_found = 0;
-    node * n = find_leaf( root, key_start, verbose );
-    if (n == NULL) return 0;
-    for (i = 0; i < n->num_keys && n->keys[i] < key_start; i++) ;
-    if (i == n->num_keys) return 0;
-    while (n != NULL) {
-        for ( ; i < n->num_keys && n->keys[i] <= key_end; i++) {
-            returned_keys[num_found] = n->keys[i];
-            returned_pointers[num_found] = n->pointers[i];
-            num_found++;
-        }
-        n = n->pointers[order - 1];
-        i = 0;
-    }
-    return num_found;
-}
-
 
 /* Traces the path from the root to a leaf, searching
  * by key.  Displays information about the path
  * if the verbose flag is set.
  * Returns the leaf containing the given key.
  */
-node * find_leaf( node * root, int key, bool verbose ) {
+Offset find_leaf(int64_t key) {
     int i = 0;
-    node * c = root;
-    if (c == NULL) {
-        if (verbose) 
-            printf("Empty tree.\n");
+    Offset c = GetHeadersRootPage();
+    if (c == NULL_PAGE) {
         return c;
     }
-    while (!c->is_leaf) {
-        if (verbose) {
-            printf("[");
-            for (i = 0; i < c->num_keys - 1; i++)
-                printf("%d ", c->keys[i]);
-            printf("%d] ", c->keys[i]);
-        }
+    
+    while (GetIsLeaf(c) == DEF_INTERNAL){
         i = 0;
-        while (i < c->num_keys) {
-            if (key >= c->keys[i]) i++;
-            else break;
+        int key_num = GetKeyNum(c);
+        while (i < key_num) {
+            if (GetKey(c, i) < key){
+                i++;
+            } else {
+                break;
+            }
         }
-        if (verbose)
-            printf("%d ->\n", i);
-        c = (node *)c->pointers[i];
-    }
-    if (verbose) {
-        printf("Leaf [");
-        for (i = 0; i < c->num_keys - 1; i++)
-            printf("%d ", c->keys[i]);
-        printf("%d] ->\n", c->keys[i]);
+        c = GetChild(c, i);
     }
     return c;
 }
@@ -434,16 +216,24 @@ node * find_leaf( node * root, int key, bool verbose ) {
 /* Finds and returns the record to which
  * a key refers.
  */
-record * find( node * root, int key, bool verbose ) {
-    int i = 0;
-    node * c = find_leaf( root, key, verbose );
-    if (c == NULL) return NULL;
-    for (i = 0; i < c->num_keys; i++)
-        if (c->keys[i] == key) break;
-    if (i == c->num_keys) 
+char* find(int64_t key) { 
+    int64_t i = 0;
+    Offset c = find_leaf(key);
+    if (c == NULL_PAGE){
         return NULL;
-    else
-        return (record *)c->pointers[i];
+    }
+    int key_num = GetKeyNum(c);
+    for (i = 0; i < key_num; i++){
+        if (GetKey(c,i) == key){
+            break;
+        }
+    }
+    if (i == key_num) {
+        return NULL;
+    } else {
+        char* ret =  GetValuePtr(c, i);
+        return ret;
+    }
 }
 
 /* Finds the appropriate place to
@@ -459,93 +249,48 @@ int cut( int length ) {
 
 // INSERTION
 
-/* Creates a new record to hold the value
- * to which a key refers.
- */
-record * make_record(int value) {
-    record * new_record = (record *)malloc(sizeof(record));
-    if (new_record == NULL) {
-        perror("Record creation.");
-        exit(EXIT_FAILURE);
-    }
-    else {
-        new_record->value = value;
-    }
-    return new_record;
-}
-
 
 /* Creates a new general node, which can be adapted
  * to serve as either a leaf or an internal node.
  */
-node * make_node( void ) {
-    node * new_node;
-    new_node = malloc(sizeof(node));
-    if (new_node == NULL) {
+Offset make_node( void ) {
+    Offset ret = GetNewPage();
+    if (ret == NULL_PAGE) {
         perror("Node creation.");
         exit(EXIT_FAILURE);
     }
-    new_node->keys = malloc( (order - 1) * sizeof(int) );
-    if (new_node->keys == NULL) {
-        perror("New node keys array.");
-        exit(EXIT_FAILURE);
-    }
-    new_node->pointers = malloc( order * sizeof(void *) );
-    if (new_node->pointers == NULL) {
-        perror("New node pointers array.");
-        exit(EXIT_FAILURE);
-    }
-    new_node->is_leaf = false;
-    new_node->num_keys = 0;
-    new_node->parent = NULL;
-    new_node->next = NULL;
-    return new_node;
+    SetIsLeaf(ret, DEF_INTERNAL);
+    SetKeyNum(ret, 0);
+    SetParentPage(ret, NULL_PAGE);
+    SetRightSibling(ret, NULL_PAGE);
+    return ret;
 }
 
-/* Creates a new leaf by creating a node
- * and then adapting it appropriately.
- */
-node * make_leaf( void ) {
-    node * leaf = make_node();
-    leaf->is_leaf = true;
-    return leaf;
-}
-
-
-/* Helper function used in insert_into_parent
- * to find the index of the parent's pointer to 
- * the node to the left of the key to be inserted.
- */
-//mycomment : "get my index" seems better notation
-int get_left_index(node * parent, node * left) {
-
-    int left_index = 0;
-    while (left_index <= parent->num_keys && 
-            parent->pointers[left_index] != left)
-        left_index++;
-    return left_index;
+Offset make_leaf(){
+    Offset ret =make_node();
+    SetIsLeaf(ret, DEF_LEAF);
+    return ret;
 }
 
 /* Inserts a new pointer to a record and its corresponding
  * key into a leaf.
  * Returns the altered leaf.
  */
-node * insert_into_leaf( node * leaf, int key, record * pointer ) {
-
-    int i, insertion_point;
-
-    insertion_point = 0;
-    while (insertion_point < leaf->num_keys && leaf->keys[insertion_point] < key)
-        insertion_point++;
-
-    for (i = leaf->num_keys; i > insertion_point; i--) {
-        leaf->keys[i] = leaf->keys[i - 1];
-        leaf->pointers[i] = leaf->pointers[i - 1];
+int insert_into_leaf( Offset leaf, LeafRecord r ) {
+    int i = 0;
+    int num_keys = GetKeyNum(leaf);
+    while (i < num_keys && GetKey(leaf, i) < r.key){
+        i++;
     }
-    leaf->keys[insertion_point] = key;
-    leaf->pointers[insertion_point] = pointer;
-    leaf->num_keys++;
-    return leaf;
+    LeafRecord* move = NULL;
+    int insert_index = i;
+    for (i = num_keys; insert_index < i; i--) {
+        move = GetLeafRecordPtr(leaf, i-1);
+        SetLeafRecord(leaf, move, i);
+    }
+    SetLeafRecord(leaf, r, insert_index);
+    SetKeyNum(leaf, num_keys + 1);
+    return SUCCESS;
 }
 
 
@@ -554,71 +299,54 @@ node * insert_into_leaf( node * leaf, int key, record * pointer ) {
  * the tree's order, causing the leaf to be split
  * in half.
  */
-node * insert_into_leaf_after_splitting(node * root, node * leaf, int key, record * pointer) {
+int insert_into_leaf_after_splitting(Offset leaf, int key, LeafRecord r) {
+    int insert_index, split, new_key, i, j;
+    Offset new_leaf;
+    LeafRecord * temp_records[LEAF_DEGREE];
+    LeafRecord * new_record = (LeafRecord * ) malloc(sizeof(LeafRecord));;
+    new_record->key = r.key;
+    for(i = 0; i < VALUE_SIZE; i++){
+        new_record->value[i] = r.value[i];
+    }
 
-    node * new_leaf;
-    int * temp_keys;
-    void ** temp_pointers;
-    int insertion_index, split, new_key, i, j;
+    
+    insert_index = 0;
+    while (insert_index < order - 1 && GetKey(leaf, insert_index) < key){
+        insert_index++;        
+    }
+
+    int num_keys = GetKeyNum(leaf);
+    for (i = j = 0; i < num_keys; i++, j++) {
+        if (i == insert_index){
+            temp_records[j] = new_record;
+            j++;
+        }
+        temp_records[j] = GetLeafRecordPtr(leaf, i);
+    }
+
+    split = cut(LEAF_DEGREE - 1);
+    for (i = 0; i < split; i++) {
+        SetLeafRecord(leaf, i, temp_records[i]);
+        free(temp_records[i]);
+    }
+    SetKeyNum(leaf, split);
 
     new_leaf = make_leaf();
-
-    temp_keys = malloc( order * sizeof(int) );
-    if (temp_keys == NULL) {
-        perror("Temporary keys array.");
-        exit(EXIT_FAILURE);
+    SetKeyNum(new_leaf, num_keys + 1 - split);
+    for (i = split; i < num_keys + 1; i++) {
+        SetLeafRecord(leaf, i - split ,temp_records[i]);
+        free(temp_records[i]);
     }
 
-    temp_pointers = malloc( order * sizeof(void *) );
-    if (temp_pointers == NULL) {
-        perror("Temporary pointers array.");
-        exit(EXIT_FAILURE);
-    }
 
-    insertion_index = 0;
-    while (insertion_index < order - 1 && leaf->keys[insertion_index] < key)
-        insertion_index++;
+    SetRightSibling(new_leaf, GetRightSibling(leaf));
+    SetRightSibling(leaf, new_leaf);
+    
 
-    for (i = 0, j = 0; i < leaf->num_keys; i++, j++) {
-        if (j == insertion_index) j++;
-        temp_keys[j] = leaf->keys[i];
-        temp_pointers[j] = leaf->pointers[i];
-    }
+    Offset parent = GetParentPage(leaf);
 
-    temp_keys[insertion_index] = key;
-    temp_pointers[insertion_index] = pointer;
-
-    leaf->num_keys = 0;
-
-    split = cut(order - 1);
-
-    for (i = 0; i < split; i++) {
-        leaf->pointers[i] = temp_pointers[i];
-        leaf->keys[i] = temp_keys[i];
-        leaf->num_keys++;
-    }
-
-    for (i = split, j = 0; i < order; i++, j++) {
-        new_leaf->pointers[j] = temp_pointers[i];
-        new_leaf->keys[j] = temp_keys[i];
-        new_leaf->num_keys++;
-    }
-
-    free(temp_pointers);
-    free(temp_keys);
-
-    new_leaf->pointers[order - 1] = leaf->pointers[order - 1];
-    leaf->pointers[order - 1] = new_leaf;
-
-    for (i = leaf->num_keys; i < order - 1; i++)
-        leaf->pointers[i] = NULL;
-    for (i = new_leaf->num_keys; i < order - 1; i++)
-        new_leaf->pointers[i] = NULL;
-
-    new_leaf->parent = leaf->parent;
-    new_key = new_leaf->keys[0];
-
-    return insert_into_parent(root, leaf, new_key, new_leaf);
+    int ret = insert_into_parent(parent, leaf, new_leaf);
+    return ret;
 }
 
 
@@ -645,7 +373,7 @@ node * insert_into_node(node * root, node * n,
  * into a node, causing the node's size to exceed
  * the order, and causing the node to split into two.
  */
-node * insert_into_node_after_splitting(node * root, node * old_node, int left_index, 
+int insert_into_node_after_splitting(node * root, node * old_node, int left_index, 
         int key, node * right) {
 
     int i, j, split, k_prime;
@@ -727,25 +455,73 @@ node * insert_into_node_after_splitting(node * root, node * old_node, int left_i
 /* Inserts a new node (leaf or internal node) into the B+ tree.
  * Returns the root of the tree after insertion.
  */
-node * insert_into_parent(node * root, node * left, int key, node * right) {
+int insert_into_parent(Offset node, Offset cur_child, Offset new_child) {
+    int64_t     new_key = GetKey(new_child, 0);
+    IntrRecord  new_record;
+    new_record.key = new_key;
+    new_record.offset = new_child;
 
-    int left_index;
-    node * parent;
+    if(node == NULL_PAGE){
+        //root node splited. new root needed
+        //TODO : find some proper functions here. consider function down.
+        //insert_into_new_root(left, key, right);
+    }
 
-    parent = left->parent;
+    int i;
+    int num_keys = GetKeyNum(node);
+    for(i = 0; i < num_keys; i++){
+        if(new_key =< GetKey(node, i)){
+            break;                  // find place
+        }
+    }
+    int insert_index = i;
 
-    /* Case: new root. */
+    if(num_keys < INTR_DEGREE){         // case : enough space for new_child node
+        SetParentPage(new_node, node);  // I'm your father
 
-    if (parent == NULL)
-        return insert_into_new_root(left, key, right);
+        IntrRecord* rp = NULL;          // right-shift all nodes after insert_index
+        for(i = num_keys; insert_index < i; i--){
+            rp = GetIntrRecordPtr(node, i - 1);
+            SetIntrRecord(node, i, *rp);
+            free(rp);
+        }                               // and insert it
+        SetIntrRecord(node, i, new_record);
+        SetKeyNum(node, num_keys + 1);
+        return SUCCESS;                 // jobs done
+        
+    } else {                            // case : no space. need to split again.
+        int j;
+        IntrRecord* temp_records[INTR_DEGREE];
+        for (i = j = 0; i < num_keys; i++, j++) {
+            if (i == insert_index){
+                temp_records[j] = new_record;
+                j++;
+            }
+            temp_records[j] = GetIntrRecordPtr(leaf, i);
+        }
+        split = cut(INTR_DEGREE - 1);
+        for (i = 0; i < split; i++) {
+            SetIntrRecord(leaf, i, temp_records[i]);
+            free(temp_records[i]);
+        }
+        SetKeyNum(leaf, split);         // original node contains half
+    
+        new_leaf = make_node();
+        SetKeyNum(new_leaf, num_keys + 1 - split);
+        for (i = split; i < num_keys + 1; i++) {
+            SetIntrRecord(leaf, i - split ,temp_records[i]);
+            free(temp_records[i]);
+        }
+    
+    
+        Offset parent = GetParentPage(leaf);
+    
+        int ret = insert_into_parent(parent, leaf, new_leaf);
+        
+        return ret;
 
-    /* Case: leaf or node. (Remainder of
-     * function body.)  
-     */
+    }
 
-    /* Find the parent's pointer to the left 
-     * node.
-     */
 
     left_index = get_left_index(parent, left);
 
@@ -805,51 +581,38 @@ node * start_new_tree(int key, record * pointer) {
  * however necessary to maintain the B+ tree
  * properties.
  */
-node * insert( node * root, int key, int value ) {
+int insert(int key, char value[VALUE_SIZE] ) {
 
-    record * pointer;
+    LeafRecord r; 
+    r.key = key;
+    r.value = value;  //rec will be only use in this function.
     node * leaf;
 
-    /* The current implementation ignores
-     * duplicates.
-     */
+    
+    char* find_result = find(key);
+    if (find_result != NULL){   // in case of duplication
+        free(find_result);
+        return -1;              // ignore input command
+    }
+    if (GetHeadersRootPage() == NULL_PAGE) { //TODO : if need to make new root
 
-    if (find(root, key, false) != NULL)
-        return root;
-
-    /* Create a new record for the
-     * value.
-     */
-    pointer = make_record(value);
-
-
-    /* Case: the tree does not exist yet.
-     * Start a new tree.
-     */
-
-    if (root == NULL) 
-        return start_new_tree(key, pointer);
+        return SUCCESS;
+    }
 
 
     /* Case: the tree already exists.
      * (Rest of function body.)
      */
-
-    leaf = find_leaf(root, key, false);
-
-    /* Case: leaf has room for key and pointer.
-     */
-
-    if (leaf->num_keys < order - 1) {
-        leaf = insert_into_leaf(leaf, key, pointer);
-        return root;
+    leaf = find_leaf(key);
+    int num_keys = GetKeyNum(leaf);
+    
+    if (num_keys < LEAF_DEGREE) {   // Case: leaf has room for key and pointer.
+        leaf = insert_into_leaf(leaf, r);
+        
+    } else {                            // Case:  leaf must be split.
+        insert_into_leaf_after_splitting(root, leaf, key, pointer);
     }
-
-
-    /* Case:  leaf must be split.
-     */
-
-    return insert_into_leaf_after_splitting(root, leaf, key, pointer);
+    return SUCCESS;
 }
 
 
@@ -967,7 +730,7 @@ node * adjust_root(node * root) {
  */
 node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index, int k_prime) {
 
-    int i, j, neighbor_insertion_index, n_end;
+    int i, j, neighbor_insert_index, n_end;
     node * tmp;
 
     /* Swap neighbor with node if node is on the
@@ -986,7 +749,7 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
      * in the special case of n being a leftmost child.
      */
 
-    neighbor_insertion_index = neighbor->num_keys;
+    neighbor_insert_index = neighbor->num_keys;
 
     /* Case:  nonleaf node.
      * Append k_prime and the following pointer.
@@ -998,13 +761,13 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
         /* Append k_prime.
          */
 
-        neighbor->keys[neighbor_insertion_index] = k_prime;
+        neighbor->keys[neighbor_insert_index] = k_prime;
         neighbor->num_keys++;
 
 
         n_end = n->num_keys;
 
-        for (i = neighbor_insertion_index + 1, j = 0; j < n_end; i++, j++) {
+        for (i = neighbor_insert_index + 1, j = 0; j < n_end; i++, j++) {
             neighbor->keys[i] = n->keys[j];
             neighbor->pointers[i] = n->pointers[j];
             neighbor->num_keys++;
@@ -1033,7 +796,7 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
      */
 
     else {
-        for (i = neighbor_insertion_index, j = 0; j < n->num_keys; i++, j++) {
+        for (i = neighbor_insert_index, j = 0; j < n->num_keys; i++, j++) {
             neighbor->keys[i] = n->keys[j];
             neighbor->pointers[i] = n->pointers[j];
             neighbor->num_keys++;
@@ -1240,78 +1003,227 @@ node * destroy_tree(node * root) {
 
 //under here, my funtions
 /*
- * these code is in bpt.h
+//these code is in bpt.h
 #define FIRST_ASSIGNE_PAGE_NUM  16
 #define PAGE_SIZE               4096                  
-#define RECORD_SIZE             256     
+#define LEAF_RECORD_SIZE             256   
+
 #define TO_NEXT_FREE_PAGE_OFFSET 0      // Header   | Free    use it
 #define TO_PARENT_PAGE_OFFSET    0      // Internal | Leaf
 #define TO_ROOT_PAGE_OFFSET      8      // Header
-#define To_IS_LEAF               8      // Internal | Leaf
-#define TO_NUM_OF_KEYS           12     // Internal | Leaf
+#define TO_IS_LEAF               8      // Internal | Leaf
+#define TO_KEY_NUM               12     // Internal | Leaf
 #define TO_RIGHT_SIBLING_OFFSET  120    // Leaf
 #define TO_KEYS                  128    // Leaf
 #define TO_VALUES                136    // Leaf
 #define TO_LEFT_CHILD_OFFSET     120
 */
-typedef unsigned long Offset;
 
-void SetNextFreePage(Offset node_offset, Offset value){
-    fseek(dbfile, node_offset + TO_NEXT_FREE_PAGE_OFFSET, SEEK_SET);
-    int result =fwrite(&value, sizeof(Offset), 1, dbfile);
-    if (result != 1)
-        printf("ERROR from SetNextPage(node=%ul, val=%ul)",
-            (unsigned int)node_offset, (unsigned int)value);
-}
-Offset GetNextFreePage(Offset node_offset){
-    Offset value[1];
-    fseek(dbfile, node_offset + TO_NEXT_FREE_PAGE_OFFSET, SEEK_SET);
-    int result;
-    for(result = 0; result < 1; result += fread(value, sizeof(Offset), 1, dbfile)){
-        if (result < 0){
-            printf("ERROR: GetNextPage(node=%u) ... return %u\n",
-                (unsigned int) node_offset, (unsigned int) value[0]);
-            break;
+
+//TODO : make it work without OS's buffering
+void SetInstancesOnDB(Offset node_offset, void* value, int instance_pos, size_t size, size_t count){
+    int sum = 0;
+    int add = 0;
+    int wait_counter;
+    fseek(dbfile, node_offset + instance_pos, SEEK_SET);
+
+    while (sum < count && 0 <= add){
+        add = fwrite(value, size, count, dbfile);
+        sum += add;
+        if(add == 0){   wait_counter ++;
+        } else {        wait_counter = 0;
+        }
+        if(10 <wait_counter){
+            printf("SetInstanceOnDB(offset=0x%lx, val, pos=%d, size=%d, count=%d)      not response.\n",
+                    (unsigned long)node_offset, instance_pos, (int) size, (int) count);
+            return;
+        }
+        if(add < 0){
+            printf("SetInstanceOnDB(offset=0x%lx, val, pos=%d, size=%d, count=%d)      failed\n",
+                    (unsigned long)node_offset, instance_pos, (int) size, (int) count);
+            return;
         }
     }
     
-    return value[0];
+    if (0 <= add){
+        return;
+    } else {   //error
+        printf("ERROR from SetInstancesOnDB(page num=%d, &val, instance_pos = %d, size = %d, count = %d)",
+            (int)node_offset / PAGE_SIZE, instance_pos, (int)size, (int)count);
+    }
 }
 
+// read/write basic functions (this common code will be applied to specifified funtions)
+Offset GetOffsetOnDB(Offset node_offset, int instance_pos){
+    Offset value[1];
+    fseek(dbfile, node_offset + instance_pos, SEEK_SET);
+    int result = 0;
+    printf("debug| start GetOffsetOnDB(offset=0x%lx, pos=%d)\n",
+            (unsigned long)node_offset, instance_pos);
+    while(0 == result){
+        result = fread(value, sizeof(Offset), 1, dbfile);
+    }
+    if (result < 0){
+        printf("ERROR: GetOffsetOnDB(node=%u, pos = %d) -> return %u\n",
+            (unsigned int) node_offset, instance_pos, (unsigned int) value[0]);
+    }
+    return value[0];
+}
+int32_t GetInt32OnDB(Offset node_offset, int instance_pos){
+    int32_t value[1];
+    fseek(dbfile, node_offset + instance_pos, SEEK_SET);
+    int result = fread(value, sizeof(int32_t), 1, dbfile);
+        if (result < 0){
+            printf("ERROR: GetInt32OnDB(node=%u, pos = %d) -> return %u\n",
+                (unsigned int) node_offset, instance_pos, (unsigned int) value[0]);
+        }
+    return value[0];
+}
+int64_t GetInt32OnDB(Offset node_offset, int instance_pos){
+    int64_t value[1];
+    fseek(dbfile, node_offset + instance_pos, SEEK_SET);
+    int result = fread(value, sizeof(int64_t), 1, dbfile);
+        if (result < 0){
+            printf("ERROR: GetInt64OnDB(node=%u, pos = %d) -> return %u\n",
+                (unsigned int) node_offset, instance_pos, (unsigned int) value[0]);
+        }
+    return value[0];
+}
+//must free allocated return value!!!!!!
+void * GetVoidPtrOnDB(Offset node_offset, int instance_pos, size_t size, size_t count){  
+    char* value = (char*) malloc(size * count);
+    fseek(dbfile, node_offset + instance_pos, SEEK_SET);
+    int sum = 0, add = 0;
+    while(sum < count){
+        add = fread(value + (sum * size), size, count-sum);
+        sum += add;
+        if (add < 0){
+            printf("ERROR: GetVoidPtrOnDB(node=%u, pos = %d) -> return %u\n",
+                (unsigned int) node_offset, instance_pos, (unsigned int) value[0]);
+        }
+    }
+    return (void *)value;
+}
+
+
+
+//==============================================================================//
+//        *                  [dbfile] GET, SET funtions               *         //
+//  general format : Set[instance_name](node_offset, instance_value)            //
+//                   Get[instance_name](node_offset)                            //
+//  get, set value on dbfile.                                                   //
+//  To select which node's value you want, it requires node_offset              //
+//  But, Instance only used in header don't require it                          //
+//  header form    : SetHeaders[instance_name](instance_value)                  //
+//                   SetHeaders[instance_name]()                                //
+//==============================================================================//
+void SetNextFreePage(Offset node_offset, Offset value){ SetInstancesOnDB(node_offset, &value, TO_NEXT_FREE_PAGE_OFFSET, sizeof(Offset), 1);}
+void SetParentPage  (Offset node_offset, Offset value){ SetInstancesOnDB(node_offset, &value, TO_PARENT_PAGE_OFFSET   , sizeof(Offset), 1);}
+void SetRightSibling(Offset node_offset, Offset value){ SetInstancesOnDB(node_offset, &value, TO_RIGHT_SIBLING_OFFSET , sizeof(Offset), 1);}
+void SetIsLeaf      (Offset node_offset,int32_t value){ SetInstancesOnDB(node_offset, &value, TO_IS_LEAF              , sizeof(int32_t),1);}
+void SetKeyNum      (Offset node_offset,int32_t value){ SetInstancesOnDB(node_offset, &value, TO_KEY_NUM              , sizeof(int32_t),1);}
+void SetHeadersPageNum(                 int32_t value){ SetInstancesOnDB(ADDR_HEADER, &value, TO_PAGE_NUM             , sizeof(int32_t),1);}
+void SetHeadersRootPage(                 Offset value){ SetInstancesOnDB(ADDR_HEADER, &value, TO_ROOT_PAGE_OFFSET     , sizeof(Offset), 1);}
+void SetLeafRecord(Offset node_offset, int index, LeafRecord r){
+    SetInstancesOnDB(node_offset, &r, TO_KEYS + index * LEAF_RECORD_SIZE, sizeof(LeafRecord));
+}
+void SetIntrRecord(Offset node_offset, int index, LeafRecord r){
+    SetInstancesOnDB(node_offset, &r, TO_KEYS + index * INTR_RECORD_SIZE, sizeof(IntrRecord));
+}
+
+
+Offset GetNextFreePage(Offset node_offset){ return GetOffsetOnDB(node_offset, TO_NEXT_FREE_PAGE_OFFSET);}
+Offset GetParentPage  (Offset node_offset){ return GetOffsetOnDB(node_offset, TO_PARENT_PAGE_OFFSET);}
+Offset GetRightSibling(Offset node_offset){ return GetOffsetOnDB(node_offset, TO_RIGHT_SIBLING_OFFSET);}
+int32_t GetIsLeaf     (Offset node_offset){ return GetInt32OnDB (node_offset, TO_IS_LEAF);}
+int32_t GetKeyNum     (Offset node_offset){ return GetInt32OnDB (node_offset, TO_KEY_NUM);}
+int32_t GetHeadersPageNum(               ){ return GetInt32OnDB (ADDR_HEADER, TO_PAGE_NUM);}
+Offset GetHeadersRootPage(               ){ return GetOffsetOnDB(ADDR_HEADER, TO_ROOT_PAGE_OFFSET);}
+
+Offset  GetChild   (Offset node_offset, int index){ return GetOffsetOnDB(node_offset, TO_CHILDREN + index * INTERNAL_RECORD_SIZE)}  // for internal node
+int64_t GetKey     (Offset node_offset, int index){                                                                                 //for both node
+    switch(GetIsLeaf(node_offset)){
+    case DEF_INTERNAL:
+        return GetInt64OnDB (node_offset, TO_KEYS + index * INTERNAL_RECORD_SIZE);
+    case DEF_LEAF:
+        return GetInt64OnDB (node_offset, TO_KEYS + index * LEAF_RECORD_SIZE);
+    default:
+        printf("error! GetKey(Offset= 0x%lx(pagenum = %d), i); on this node, IsLeaf value is strange. not sure where to read\n",
+                node_offset, node_offset / PAGE_SIZE);
+        exit(1);
+    }
+}
+LeafRecord * GetLeafRecordPtr(Offset node_offset, int index){
+    return (LeafRecord*)GetVoidPtrOnDB(node_offset, TO_KEYS + index * LEAF_RECORD_SIZE, sizeof(LeafRecord), 1);
+}
+IntrRecord * GetIntrRecordPtr()(Offset node_offset, int index){
+    return (IntrRecord*)GetVoidPtrOnDB(node_offset, TO_KEYS + index * INTR_RECORD_SIZE, sizeof(IntrRecord), 1);
+}
+char* GetValuePtr(Offset node_offset, int index){
+    return (LeafRecord*)GetVoidPtrOnDB(node_offset, TO_VALUES + index * LEAF_RECORD_SIZE, VALUE_SIZE, 1);
+}
+
+Offset GetNewPage(){
+    Offset ret = GetNextFreePage(ADDR_HEADER);
+    if(ret == NULL_PAGE){
+        MoreFreePage();
+        ret = GetNextFreePage(ADDR_HEADER);
+    }
+
+    Offset next = GetNextFreePage(ret);
+    SetNextFreePage(ADDR_HEADER, next);
+    return ret;
+}
+
+
+
+void MoreFreePage(){
+    int32_t page_num = GetHeadersPageNum();
+    int32_t newpage_pos = page_num * PAGE_SIZE;
+    printf("debug| B4change : headers pagenum was %d\n", page_num);
+
+
+    Offset page_cur = ADDR_HEADER;                           //search from header
+    Offset page_next= GetNextFreePage(page_cur);
+    while(page_next != (Offset) NULL_PAGE){//while next page is not empty; if no free page, this loop not used
+        page_cur = page_next;
+        page_next= GetNextFreePage(page_cur);
+    }                                              //now page_cur is last free page(or header)
+    
+    SetNextFreePage(page_cur, newpage_pos);
+    printf("debug| set newpage as offset=0x%lx, num=%d\n",
+            (unsigned long)newpage_pos, (int)newpage_pos/PAGE_SIZE);
+
+    const int limit = page_num + FREEPAGE_ADD_UNIT;
+    int count = page_num;
+    for( ; count < limit; count++){
+        newpage_pos = count * PAGE_SIZE;
+        SetNextFreePage(newpage_pos, newpage_pos + PAGE_SIZE);
+    }
+    fseek(dbfile, newpage_pos, SEEK_SET);
+    fwrite(empty_page, PAGE_SIZE, 1, dbfile);
+    
+    SetHeadersPageNum(limit);
+    printf("debug|More Free Page() end. lim was 0x%x == %dth\n", limit * PAGE_SIZE, limit );
+    printf("debug|heder's page num == %d\n", GetHeadersPageNum());
+}
+
+
+
 void FileInit(FILE* dbfile){
-    char header_page[PAGE_SIZE];
-    char free_page[PAGE_SIZE];
-    char root_page[PAGE_SIZE];  //make it leaf
     int i;
+    fseek(dbfile, 0, SEEK_END);
     for(i = 0; i < PAGE_SIZE; i++){
-        header_page[i] = 0;
-        root_page[i] = 0;
-        free_page[i] = 0;
+        empty_page[i] = 0;
     }
 
-    
-/*    i = 0;
-    Offset * free_page_offset = (Offset*) header_page + (sizeof(Offset) * (i++) );
-    Offset * root_page_offset = (Offset*) header_page + (sizeof(Offset) * (i++) );
-    Offset *page_count_offset = (Offset*) header_page + (sizeof(Offset) * (i++) );
+    SetNextFreePage(ADDR_HEADER, NULL_PAGE);
+    SetHeadersRootPage(NULL_PAGE);
+    SetHeadersPageNum(1);
 
-    *free_page_offset = PAGE_SIZE * 2;
-    *root_page_offset = PAGE_SIZE * 1;
-    *page_count_offset= FIRST_ASSIGNE_PAGE_NUM;
-*/
+    MoreFreePage();
 
     
-    /*
-    for( ; i < FIRST_ASSIGNE_PAGE_NUM; i++){
-        WriteAt(dbfile, PAGE_SIZE * (i), free_page, PAGE_SIZE);
-    }*/
-    for(i = 1; i <= 3; i++){
-        Offset result = GetNextFreePage(0);
-        printf("debug|header's nextfree : 0x%x, now I will insert %d\n",
-            (unsigned int)result, i);
-        SetNextFreePage(0, i);
-    }
-    fclose(dbfile);
-    exit(1);
+    
 }
 

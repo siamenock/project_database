@@ -31,18 +31,32 @@
 
 
 // Constants for DB file
-#define FIRST_ASSIGNE_PAGE_NUM  16
-#define PAGE_SIZE               4096                  
-#define RECORD_SIZE             256     
+#define FREEPAGE_ADD_UNIT       16
+#define PAGE_SIZE               4096
+#define RECORD_SIZE             128
+#define VALUE_SIZE              120
+#define INTERNAL_RECORD_SIZE    16
+
+#define LEAF_DEGREE             31
+#define INTR_DEGREE             248
+
+#define ADDR_HEADER             0
+#define NULL_PAGE               0
+#define DEF_INTERNAL            0
+#define DEF_LEAF                1
+#define SUCCESS                 0
+
 #define TO_NEXT_FREE_PAGE_OFFSET 0      // Header   | Free    use it
 #define TO_PARENT_PAGE_OFFSET    0      // Internal | Leaf
 #define TO_ROOT_PAGE_OFFSET      8      // Header
-#define To_IS_LEAF               8      // Internal | Leaf
-#define TO_NUM_OF_KEYS           12     // Internal | Leaf
+#define TO_IS_LEAF               8      // Internal | Leaf
+#define TO_KEY_NUM               12     // Internal | Leaf
+#define TO_PAGE_NUM              16     // Header
+#define TO_CHILDREN              120    // Internal
 #define TO_RIGHT_SIBLING_OFFSET  120    // Leaf
 #define TO_KEYS                  128    // Leaf
 #define TO_VALUES                136    // Leaf
-#define TO_LEFT_CHILD_OFFSET     120
+
 
 
 
@@ -58,6 +72,12 @@
  * to change the type and content
  * of the value field.
  */
+typedef unsigned long Offset;
+typedef struct LeafRecord{      //leaf node's record
+        int64_t key;            //not support internal node
+        char value[VALUE_SIZE];
+}LeafRecord;            
+
 typedef struct record {
     int value;
 } record;
@@ -134,65 +154,63 @@ extern bool verbose_output;
  */
 extern FILE* dbfile;
 
+
+char empty_page[PAGE_SIZE];
+
 // FUNCTION PROTOTYPES.
 
 // Output and utility.
 
-void license_notice( void );
-void print_license( int licence_part );
-void usage_1( void );
-void usage_2( void );
-void usage_3( void );
+/*
 void enqueue( node * new_node );
 node * dequeue( void );
 int height( node * root );
 int path_to_root( node * root, node * child );
 void print_leaves( node * root );
 void print_tree( node * root );
-void find_and_print(node * root, int key, bool verbose); 
+/void find_and_print(node * root, int key, bool verbose); 
 void find_and_print_range(node * root, int range1, int range2, bool verbose); 
 int find_range( node * root, int key_start, int key_end, bool verbose,
         int returned_keys[], void * returned_pointers[]); 
 node * find_leaf( node * root, int key, bool verbose );
 record * find( node * root, int key, bool verbose );
 int cut( int length );
-
+*/
 // Insertion.
 
-record * make_record(int value);
-node * make_node( void );
-node * make_leaf( void );
+
+Offset make_node( void );
+Offset make_leaf( void );
 int get_left_index(node * parent, node * left);
-node * insert_into_leaf( node * leaf, int key, record * pointer );
-node * insert_into_leaf_after_splitting(node * root, node * leaf, int key,
-                                        record * pointer);
-node * insert_into_node(node * root, node * parent, 
-        int left_index, int key, node * right);
-node * insert_into_node_after_splitting(node * root, node * parent,
-                                        int left_index,
-        int key, node * right);
-node * insert_into_parent(node * root, node * left, int key, node * right);
-node * insert_into_new_root(node * left, int key, node * right);
-node * start_new_tree(int key, record * pointer);
-node * insert( node * root, int key, int value );
 
-// Deletion.
-
-int get_neighbor_index( node * n );
-node * adjust_root(node * root);
-node * coalesce_nodes(node * root, node * n, node * neighbor,
-                      int neighbor_index, int k_prime);
-node * redistribute_nodes(node * root, node * n, node * neighbor,
-                          int neighbor_index,
-        int k_prime_index, int k_prime);
-node * delete_entry( node * root, node * n, int key, void * pointer );
-node * delete( node * root, int key );
-
-void destroy_tree_nodes(node * root);
-node * destroy_tree(node * root);
-
+int insert_into_leaf_after_splitting(Offset leaf, int key, LeafRecord r);
 
 //under here, my funtions
 void FileInit(FILE* fp);
+
+void SetInstancesOnDB(Offset node_offset, void* value, int instance_pos, size_t size, size_t count);
+Offset GetOffsetOnDB(Offset node_offset, int instance_pos);
+int32_t GetInt32OnDB(Offset node_offset, int instance_pos);
+
+void SetNextFreePage(Offset node_offset, Offset value);
+void SetParentPage  (Offset node_offset, Offset value);
+void SetRightSibling(Offset node_offset, Offset value);
+void SetIsLeaf      (Offset node_offset,int32_t value);
+void SetKeyNum      (Offset node_offset,int32_t value);
+void SetHeadersPageNum(                 int32_t value);
+void SetHeadersRootPage(                 Offset value);
+
+
+Offset GetNextFreePage(Offset node_offset);
+Offset GetParentPage  (Offset node_offset);
+Offset GetRightSibling(Offset node_offset);
+int32_t GetIsLeaf     (Offset node_offset);
+int32_t GetKeyNum     (Offset node_offset);
+int32_t GetHeadersPageNum(               );
+Offset GetHeadersRootPage(               );
+Offset  GetChild (Offset node_offset, int index);
+int64_t GetKey   (Offset node_offset, int index);
+char* GetValuePtr(Offset node_offset, int index);
+
 
 #endif /* __BPT_H__*/
