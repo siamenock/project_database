@@ -8,24 +8,17 @@
 int main(int argc, char ** argv) {
 	char input_file[64];
 	char cmd[128];
-	node * root;
+	//node * root;
 	int input, range2;
 	char instruction;
 	char license_part;
 	char buffer[] = "asdf";
-	root = NULL;
-	verbose_output = false;
-
-	// dbfile is global var. only 1 File used now
-	dbfile = fopen("this_is_sample_file", "w");
-	fwrite(buffer, sizeof(char), sizeof(buffer), dbfile);
-	fclose(dbfile);
-
-
+	
 	//----------------------------------------------------------//
 	//                      presetting part                     //
+	//			open new file or open existing file				//
 	//----------------------------------------------------------//
-	//printf("preset > ");
+	printf("preset > ");
 	while (scanf("%s", cmd)) {
 		printf("debug|scanf : %s\n", cmd);
 		if (strcmp(cmd, "open") == 0) {    //TODO: change into cmd_pre array and switch
@@ -62,13 +55,15 @@ int main(int argc, char ** argv) {
 		INSERT = 0,
 		FIND,
 		DELETE,
+		PRINT,
 		OPERATION_COUNT
 	};
 	int op = OPERATION_COUNT;
 	const char * op_string[3];   //operation string used by user
-	op_string[INSERT] = "insert";
-	op_string[FIND] = "find";
-	op_string[DELETE] = "delete";
+	op_string[INSERT]	= "insert";
+	op_string[FIND]		= "find";
+	op_string[DELETE]	= "delete";
+	op_string[PRINT]	= "print";
 
 	printf("> ");
 	while (scanf("%s", cmd) != EOF) {
@@ -89,6 +84,10 @@ int main(int argc, char ** argv) {
 			//print_tree(root);
 			break;
 		case FIND:
+			//TODO
+			break;
+		case PRINT:
+			PrintTree();
 			break;
 		case OPERATION_COUNT:   //DEFAULT
 								//usage_2();
