@@ -8,6 +8,7 @@
 int main(int argc, char ** argv) {
 	char input_file[64];
 	char cmd[128];
+	char val[VALUE_SIZE];
 	//node * root;
 	int input, range2;
 	char instruction;
@@ -79,9 +80,8 @@ int main(int argc, char ** argv) {
 			//print_tree(root);
 			break;
 		case INSERT:
-			scanf("%d", &input);
-			//root = insert(root, input, input);
-			//print_tree(root);
+			scanf("%d %s", &input, val);
+			insert(input, val);
 			break;
 		case FIND:
 			//TODO
