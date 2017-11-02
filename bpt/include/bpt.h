@@ -1,8 +1,8 @@
 #ifndef __BPT_H__
 #define __BPT_H__
 
-#define _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_DEPRECATE
+//#define _CRT_SECURE_NO_WARNINGS
+
 
 // Uncomment the line below if you are compiling on Windows.
 // #define WINDOWS
@@ -118,14 +118,7 @@ typedef struct record {
 * to data is always num_keys.  The
 * last leaf pointer points to the next leaf.
 */
-typedef struct node {
-	void ** pointers;
-	int * keys;
-	struct node * parent;
-	bool is_leaf;
-	int num_keys;
-	struct node * next; // Used for queue.
-} node;
+
 
 // GLOBALS.
 
@@ -139,21 +132,21 @@ typedef struct node {
 * This global variable is initialized to the
 * default value.
 */
-extern int order;
+//extern int order;
 
 /* The queue is used to print the tree in
 * level order, starting from the root
 * printing each entire rank on a separate
 * line, finishing with the leaves.
 */
-extern node * queue;
+//extern node * queue;
 
 /* The user can toggle on and off the "verbose"
 * property, which causes the pointer addresses
 * to be printed out in hexadecimal notation
 * next to their corresponding keys.
 */
-extern bool verbose_output;
+//extern bool verbose_output;
 
 
 
@@ -168,7 +161,7 @@ char empty_page[PAGE_SIZE];
 // FUNCTION PROTOTYPES.
 
 // Output and utility.
-
+void PrintTree();
 /*
 void enqueue( node * new_node );
 node * dequeue( void );
@@ -185,17 +178,20 @@ record * find( node * root, int key, bool verbose );
 int cut( int length );
 */
 // Insertion.
-
+//int get_left_index(node * parent, node * left);
 
 Offset make_node(void);
 Offset make_leaf(void);
-int get_left_index(node * parent, node * left);
 
-int insert_into_leaf_after_splitting(Offset leaf, int key, LeafRecord r);
+int insert_into_leaf_after_splitting(Offset leaf, LeafRecord r);
+int insert_into_new_root(Offset cur_child, Offset new_child);
+int insert_into_parent(Offset node, Offset cur_child, Offset new_child);
+
+
 
 //under here, my funtions
 void FileInit(FILE* fp);
-
+Offset GetNewPage();
 void MoreFreePage();
 void SetInstancesOnDB(Offset node_offset, void* value, int instance_pos, size_t size, size_t count);
 Offset GetOffsetOnDB(Offset node_offset, int instance_pos);
@@ -210,6 +206,8 @@ void SetHeadersPageNum(int32_t value);
 void SetHeadersRootPage(Offset value);
 void SetLeafRecord(Offset node_offset, int index, LeafRecord r);
 void SetIntrRecord(Offset node_offset, int index, IntrRecord r);
+void SetChild(Offset node_offset, int index, Offset value);
+void SetKey (Offset node_offset, int index, int64_t value);
 
 Offset GetNextFreePage(Offset node_offset);
 Offset GetParentPage(Offset node_offset);
@@ -221,6 +219,8 @@ Offset GetHeadersRootPage();
 Offset  GetChild(Offset node_offset, int index);
 int64_t GetKey(Offset node_offset, int index);
 char* GetValuePtr(Offset node_offset, int index);
+LeafRecord * GetLeafRecordPtr(Offset node_offset, int index);
+IntrRecord * GetIntrRecordPtr(Offset node_offset, int index);
 
 
 
