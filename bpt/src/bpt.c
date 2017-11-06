@@ -85,7 +85,7 @@ void PrintTree() {
 				if (is_leaf == false) {
 					enqueue(&q2, GetChild(ofs, i + 1));
 				}
-				printf("%ld,", GetKey(ofs, i));
+				printf("%lld,", GetKey(ofs, i));
 			}
 			printf("]");
 			//now this node is done.
@@ -96,6 +96,20 @@ void PrintTree() {
 		//now this depth is done
 	}
 }
+void XxdFile() {
+	int i = 0, page_num_max;
+	Offset pos = ADDR_HEADER;
+	page_num_max = GetHeadersPageNum();
+
+	printf("PageNum %4d, NextFree|Parent %4ld, Rootpos %4d, TotalPages %d\n",
+		i, GetParentPage(pos) / PAGE_SIZE, GetHeadersRootPage()/PAGE_SIZE, GetHeadersPageNum());
+	for (i = 1; i < page_num_max; i++) {
+		pos = i * PAGE_SIZE;
+		printf("PageNum %4d, NextFree|Parent %4ld, %s, KeyNum %4d\n",
+			i, GetParentPage(pos) / PAGE_SIZE, GetIsLeaf(pos) == DEF_INTERNAL? "intr" : "leaf", GetKeyNum(pos));
+	}
+	
+}
 
 
 
@@ -104,26 +118,26 @@ void PrintTree() {
 * of the path from the root to any leaf.
 
 int height(node * root) {
-	int h = 0;
-	node * c = root;
-	while (!c->is_leaf) {
-		c = c->pointers[0];
-		h++;
-	}
-	return h;
+int h = 0;
+node * c = root;
+while (!c->is_leaf) {
+c = c->pointers[0];
+h++;
+}
+return h;
 }
 */
 /* Utility function to give the length in edges
 * of the path from any node to the root.
 
 int path_to_root(node * root, node * child) {
-	int length = 0;
-	node * c = child;
-	while (c != root) {
-		c = c->parent;
-		length++;
-	}
-	return length;
+int length = 0;
+node * c = child;
+while (c != root) {
+c = c->parent;
+length++;
+}
+return length;
 }
 */
 
@@ -302,17 +316,17 @@ int insert_into_leaf_after_splitting(Offset leaf, LeafRecord r) {
 * without violating the B+ tree properties.
 
 node * insert_into_node(node * root, node * n,
-	int left_index, int key, node * right) {
-	int i;
+int left_index, int key, node * right) {
+int i;
 
-	for (i = n->key_num; i > left_index; i--) {
-		n->pointers[i + 1] = n->pointers[i];
-		n->keys[i] = n->keys[i - 1];
-	}
-	n->pointers[left_index + 1] = right;
-	n->keys[left_index] = key;
-	n->key_num++;
-	return root;
+for (i = n->key_num; i > left_index; i--) {
+n->pointers[i + 1] = n->pointers[i];
+n->keys[i] = n->keys[i - 1];
+}
+n->pointers[left_index + 1] = right;
+n->keys[left_index] = key;
+n->key_num++;
+return root;
 }
 */
 
@@ -322,7 +336,7 @@ node * insert_into_node(node * root, node * n,
 */
 int insert_into_parent(Offset node, Offset cur_child, Offset new_child) {
 	int64_t      new_key = GetKey(new_child, 0);
-	IntrRecord * new_record = (IntrRecord *) malloc(sizeof(IntrRecord));
+	IntrRecord * new_record = (IntrRecord *)malloc(sizeof(IntrRecord));
 	new_record->key = new_key;
 	new_record->offset = new_child;
 
@@ -405,10 +419,10 @@ int insert_into_new_root(Offset cur_child, Offset new_child) {
 	SetParentPage(root, NULL_PAGE);
 	SetChild(root, 0, cur_child);
 	SetChild(root, 1, new_child);
-	SetKey  (root, 0, GetKey(new_child, 0));
+	SetKey(root, 0, GetKey(new_child, 0));
 	SetKeyNum(root, 1);
-	
-	
+
+
 	SetHeadersRootPage(root);
 	SetParentPage(cur_child, root);
 	SetParentPage(new_child, root);
@@ -423,13 +437,13 @@ int insert_into_new_root(Offset cur_child, Offset new_child) {
 
 node * start_new_tree(int key, record * pointer) {
 
-	node * root = make_leaf();
-	root->keys[0] = key;
-	root->pointers[0] = pointer;
-	root->pointers[order - 1] = NULL;
-	root->parent = NULL;
-	root->key_num++;
-	return root;
+node * root = make_leaf();
+root->keys[0] = key;
+root->pointers[0] = pointer;
+root->pointers[order - 1] = NULL;
+root->parent = NULL;
+root->key_num++;
+return root;
 }
 */
 
@@ -444,10 +458,10 @@ int insert(int key, char value[VALUE_SIZE]) {
 	int i;
 	LeafRecord r;
 	r.key = key;
-	for(i = 0; i < VALUE_SIZE; i++)
+	for (i = 0; i < VALUE_SIZE; i++)
 		r.value[i] = value[i];  //rec will be only use in this function.
 	Offset leaf;
-	
+
 	if (GetHeadersRootPage() == NULL_PAGE) { // case : no root yet!
 		Offset header = make_leaf();
 		SetHeadersRootPage(header);
@@ -460,7 +474,7 @@ int insert(int key, char value[VALUE_SIZE]) {
 		free(find_result);
 		return -1;              // ignore input command
 	}
-	
+
 
 
 	/* Case: the tree already exists.
@@ -490,59 +504,59 @@ int insert(int key, char value[VALUE_SIZE]) {
 /*
 int get_neighbor_index(node * n) {
 
-	int i;
+int i;
 
-	 Return the index of the key to the left
-	* of the pointer in the parent pointing
-	* to n.
-	* If n is the leftmost child, this means
-	* return -1.
-	
-	for (i = 0; i <= n->parent->key_num; i++)
-		if (n->parent->pointers[i] == n)
-			return i - 1;
+Return the index of the key to the left
+* of the pointer in the parent pointing
+* to n.
+* If n is the leftmost child, this means
+* return -1.
 
-	// Error state.
-	printf("Search for nonexistent pointer to node in parent.\n");
-	printf("Node:  %#lx\n", (unsigned long)n);
-	exit(EXIT_FAILURE);
+for (i = 0; i <= n->parent->key_num; i++)
+if (n->parent->pointers[i] == n)
+return i - 1;
+
+// Error state.
+printf("Search for nonexistent pointer to node in parent.\n");
+printf("Node:  %#lx\n", (unsigned long)n);
+exit(EXIT_FAILURE);
 }
 */
 /*
 node * remove_entry_from_node(node * n, int key, node * pointer) {
 
-	int i, num_pointers;
+int i, num_pointers;
 
-	// Remove the key and shift other keys accordingly.
-	i = 0;
-	while (n->keys[i] != key)
-		i++;
-	for (++i; i < n->key_num; i++)
-		n->keys[i - 1] = n->keys[i];
+// Remove the key and shift other keys accordingly.
+i = 0;
+while (n->keys[i] != key)
+i++;
+for (++i; i < n->key_num; i++)
+n->keys[i - 1] = n->keys[i];
 
-	// Remove the pointer and shift other pointers accordingly.
-	// First determine number of pointers.
-	num_pointers = n->is_leaf ? n->key_num : n->key_num + 1;
-	i = 0;
-	while (n->pointers[i] != pointer)
-		i++;
-	for (++i; i < num_pointers; i++)
-		n->pointers[i - 1] = n->pointers[i];
+// Remove the pointer and shift other pointers accordingly.
+// First determine number of pointers.
+num_pointers = n->is_leaf ? n->key_num : n->key_num + 1;
+i = 0;
+while (n->pointers[i] != pointer)
+i++;
+for (++i; i < num_pointers; i++)
+n->pointers[i - 1] = n->pointers[i];
 
 
-	// One key fewer.
-	n->key_num--;
+// One key fewer.
+n->key_num--;
 
-	// Set the other pointers to NULL for tidiness.
-	// A leaf uses the last pointer to point to the next leaf.
-	if (n->is_leaf)
-		for (i = n->key_num; i < order - 1; i++)
-			n->pointers[i] = NULL;
-	else
-		for (i = n->key_num + 1; i < order; i++)
-			n->pointers[i] = NULL;
+// Set the other pointers to NULL for tidiness.
+// A leaf uses the last pointer to point to the next leaf.
+if (n->is_leaf)
+for (i = n->key_num; i < order - 1; i++)
+n->pointers[i] = NULL;
+else
+for (i = n->key_num + 1; i < order; i++)
+n->pointers[i] = NULL;
 
-	return n;
+return n;
 }
 */
 
@@ -562,73 +576,73 @@ node * remove_entry_from_node(node * n, int key, node * pointer) {
 * maximum
 
 node * redistribute_nodes(node * root, node * n, node * neighbor, int neighbor_index,
-	int k_prime_index, int k_prime) {
+int k_prime_index, int k_prime) {
 
-	int i;
-	node * tmp;
+int i;
+node * tmp;
 
-	// Case: n has a neighbor to the left.
-	// Pull the neighbor's last key-pointer pair over
-	// from the neighbor's right end to n's left end.
+// Case: n has a neighbor to the left.
+// Pull the neighbor's last key-pointer pair over
+// from the neighbor's right end to n's left end.
 
-	if (neighbor_index != -1) {
-		if (!n->is_leaf)
-			n->pointers[n->key_num + 1] = n->pointers[n->key_num];
-		for (i = n->key_num; i > 0; i--) {
-			n->keys[i] = n->keys[i - 1];
-			n->pointers[i] = n->pointers[i - 1];
-		}
-		if (!n->is_leaf) {
-			n->pointers[0] = neighbor->pointers[neighbor->key_num];
-			tmp = (node *)n->pointers[0];
-			tmp->parent = n;
-			neighbor->pointers[neighbor->key_num] = NULL;
-			n->keys[0] = k_prime;
-			n->parent->keys[k_prime_index] = neighbor->keys[neighbor->key_num - 1];
-		}
-		else {
-			n->pointers[0] = neighbor->pointers[neighbor->key_num - 1];
-			neighbor->pointers[neighbor->key_num - 1] = NULL;
-			n->keys[0] = neighbor->keys[neighbor->key_num - 1];
-			n->parent->keys[k_prime_index] = n->keys[0];
-		}
-	}
+if (neighbor_index != -1) {
+if (!n->is_leaf)
+n->pointers[n->key_num + 1] = n->pointers[n->key_num];
+for (i = n->key_num; i > 0; i--) {
+n->keys[i] = n->keys[i - 1];
+n->pointers[i] = n->pointers[i - 1];
+}
+if (!n->is_leaf) {
+n->pointers[0] = neighbor->pointers[neighbor->key_num];
+tmp = (node *)n->pointers[0];
+tmp->parent = n;
+neighbor->pointers[neighbor->key_num] = NULL;
+n->keys[0] = k_prime;
+n->parent->keys[k_prime_index] = neighbor->keys[neighbor->key_num - 1];
+}
+else {
+n->pointers[0] = neighbor->pointers[neighbor->key_num - 1];
+neighbor->pointers[neighbor->key_num - 1] = NULL;
+n->keys[0] = neighbor->keys[neighbor->key_num - 1];
+n->parent->keys[k_prime_index] = n->keys[0];
+}
+}
 
-	// Case: n is the leftmost child.
-	// Take a key-pointer pair from the neighbor to the right.
-	// Move the neighbor's leftmost key-pointer pair
-	// to n's rightmost position.
-	
+// Case: n is the leftmost child.
+// Take a key-pointer pair from the neighbor to the right.
+// Move the neighbor's leftmost key-pointer pair
+// to n's rightmost position.
 
-	else {
-		if (n->is_leaf) {
-			n->keys[n->key_num] = neighbor->keys[0];
-			n->pointers[n->key_num] = neighbor->pointers[0];
-			n->parent->keys[k_prime_index] = neighbor->keys[1];
-		}
-		else {
-			n->keys[n->key_num] = k_prime;
-			n->pointers[n->key_num + 1] = neighbor->pointers[0];
-			tmp = (node *)n->pointers[n->key_num + 1];
-			tmp->parent = n;
-			n->parent->keys[k_prime_index] = neighbor->keys[0];
-		}
-		for (i = 0; i < neighbor->key_num - 1; i++) {
-			neighbor->keys[i] = neighbor->keys[i + 1];
-			neighbor->pointers[i] = neighbor->pointers[i + 1];
-		}
-		if (!n->is_leaf)
-			neighbor->pointers[i] = neighbor->pointers[i + 1];
-	}
 
-	// n now has one more key and one more pointer;
-	// the neighbor has one fewer of each.
-	//
+else {
+if (n->is_leaf) {
+n->keys[n->key_num] = neighbor->keys[0];
+n->pointers[n->key_num] = neighbor->pointers[0];
+n->parent->keys[k_prime_index] = neighbor->keys[1];
+}
+else {
+n->keys[n->key_num] = k_prime;
+n->pointers[n->key_num + 1] = neighbor->pointers[0];
+tmp = (node *)n->pointers[n->key_num + 1];
+tmp->parent = n;
+n->parent->keys[k_prime_index] = neighbor->keys[0];
+}
+for (i = 0; i < neighbor->key_num - 1; i++) {
+neighbor->keys[i] = neighbor->keys[i + 1];
+neighbor->pointers[i] = neighbor->pointers[i + 1];
+}
+if (!n->is_leaf)
+neighbor->pointers[i] = neighbor->pointers[i + 1];
+}
 
-	n->key_num++;
-	neighbor->key_num--;
+// n now has one more key and one more pointer;
+// the neighbor has one fewer of each.
+//
 
-	return root;
+n->key_num++;
+neighbor->key_num--;
+
+return root;
 }
 */
 
@@ -637,44 +651,44 @@ node * redistribute_nodes(node * root, node * n, node * neighbor, int neighbor_i
 * from the leaf, and then makes all appropriate
 * changes to preserve the B+ tree properties.
 
-node * delete_entry(node * root, node * n, int key, void * pointer) */ 
+node * delete_entry(node * root, node * n, int key, void * pointer) */
 
 /* Master deletion function.
 
 node * delete(node * root, int key) {
 
-	node * key_leaf;
-	record * key_record;
+node * key_leaf;
+record * key_record;
 
-	key_record = find(root, key, false);
-	key_leaf = find_leaf(root, key, false);
-	if (key_record != NULL && key_leaf != NULL) {
-		root = delete_entry(root, key_leaf, key, key_record);
-		free(key_record);
-	}
-	return root;
+key_record = find(root, key, false);
+key_leaf = find_leaf(root, key, false);
+if (key_record != NULL && key_leaf != NULL) {
+root = delete_entry(root, key_leaf, key, key_record);
+free(key_record);
+}
+return root;
 }
 
 
 void destroy_tree_nodes(node * root) {
-	int i;
-	if (root->is_leaf)
-		for (i = 0; i < root->key_num; i++)
-			free(root->pointers[i]);
-	else
-		for (i = 0; i < root->key_num + 1; i++)
-			destroy_tree_nodes(root->pointers[i]);
-	free(root->pointers);
-	free(root->keys);
-	free(root);
+int i;
+if (root->is_leaf)
+for (i = 0; i < root->key_num; i++)
+free(root->pointers[i]);
+else
+for (i = 0; i < root->key_num + 1; i++)
+destroy_tree_nodes(root->pointers[i]);
+free(root->pointers);
+free(root->keys);
+free(root);
 }
 
 
 node * destroy_tree(node * root) {
-	destroy_tree_nodes(root);
-	return NULL;
+destroy_tree_nodes(root);
+return NULL;
 }
- */
+*/
 
 
 
@@ -739,8 +753,7 @@ Offset GetOffsetOnDB(Offset node_offset, int instance_pos) {
 	Offset value[1];
 	fseek(dbfile, node_offset + instance_pos, SEEK_SET);
 	int result = 0;
-	printf("debug| start GetOffsetOnDB(offset=0x%lx, pos=%d)\n",
-		(unsigned long)node_offset, instance_pos);
+	//printf("debug| start GetOffsetOnDB(offset=0x%lx, pos=%d)\n",(unsigned long)node_offset, instance_pos);
 	while (0 == result) {
 		result = fread(value, sizeof(Offset), 1, dbfile);
 	}
@@ -772,10 +785,10 @@ int64_t GetInt64OnDB(Offset node_offset, int instance_pos) {
 }
 //must free allocated return value!!!!!!
 void * GetVoidPtrOnDB(Offset node_offset, int instance_pos, size_t size, size_t count) {
-	char * value = (char * ) malloc(size * count);		// to move 1 Byte per ++, define value as char pointer
+	char * value = (char *)malloc(size * count);		// to move 1 Byte per ++, define value as char pointer
 	fseek(dbfile, node_offset + instance_pos, SEEK_SET);
 	int sum = 0, add = 0;
-	while (sum < (int) count) {
+	while (sum < (int)count) {
 		add = fread(value + (sum * size), size, count - sum, dbfile);
 		sum += add;
 		if (add < 0) {
@@ -800,29 +813,29 @@ void * GetVoidPtrOnDB(Offset node_offset, int instance_pos, size_t size, size_t 
 //  header form    : SetHeaders[instance_name](instance_value)                  //
 //                   SetHeaders[instance_name]()                                //
 //==============================================================================//
-void SetNextFreePage(Offset node_offset, Offset value)	{ SetInstancesOnDB(node_offset, &value, TO_NEXT_FREE_PAGE_OFFSET, sizeof(Offset), 1); }
-void SetParentPage	(Offset node_offset, Offset value)	{ SetInstancesOnDB(node_offset, &value, TO_PARENT_PAGE_OFFSET, sizeof(Offset), 1); }
-void SetRightSibling(Offset node_offset, Offset value)	{ SetInstancesOnDB(node_offset, &value, TO_RIGHT_SIBLING_OFFSET, sizeof(Offset), 1); }
-void SetIsLeaf		(Offset node_offset, int32_t value)	{ SetInstancesOnDB(node_offset, &value, TO_IS_LEAF, sizeof(int32_t), 1); }
-void SetKeyNum		(Offset node_offset, int32_t value)	{ SetInstancesOnDB(node_offset, &value, TO_KEY_NUM, sizeof(int32_t), 1); }
-void SetChild(Offset node_offset, int index, Offset value) { SetInstancesOnDB(node_offset, &value, TO_CHILDREN + index * (int) sizeof(IntrRecord), (int) sizeof(Offset ), 1); }  // for internal node
-void SetKey	 (Offset node_offset, int index,int64_t value) { SetInstancesOnDB(node_offset, &value, TO_KEYS	   + index * (int) sizeof(IntrRecord), (int) sizeof(int64_t), 1); }  // for internal node
-void SetHeadersPageNum(int64_t value)	{ SetInstancesOnDB(ADDR_HEADER, &value, TO_PAGE_NUM, sizeof(int64_t), 1); }
-void SetHeadersRootPage(Offset value)	{ SetInstancesOnDB(ADDR_HEADER, &value, TO_ROOT_PAGE_OFFSET, sizeof(Offset), 1); }
+void SetNextFreePage(Offset node_offset, Offset value) { SetInstancesOnDB(node_offset, &value, TO_NEXT_FREE_PAGE_OFFSET, sizeof(Offset), 1); }
+void SetParentPage(Offset node_offset, Offset value) { SetInstancesOnDB(node_offset, &value, TO_PARENT_PAGE_OFFSET, sizeof(Offset), 1); }
+void SetRightSibling(Offset node_offset, Offset value) { SetInstancesOnDB(node_offset, &value, TO_RIGHT_SIBLING_OFFSET, sizeof(Offset), 1); }
+void SetIsLeaf(Offset node_offset, int32_t value) { SetInstancesOnDB(node_offset, &value, TO_IS_LEAF, sizeof(int32_t), 1); }
+void SetKeyNum(Offset node_offset, int32_t value) { SetInstancesOnDB(node_offset, &value, TO_KEY_NUM, sizeof(int32_t), 1); }
+void SetChild(Offset node_offset, int index, Offset value) { SetInstancesOnDB(node_offset, &value, TO_CHILDREN + index * (int) sizeof(IntrRecord), (int) sizeof(Offset), 1); }  // for internal node
+void SetKey(Offset node_offset, int index, int64_t value) { SetInstancesOnDB(node_offset, &value, TO_KEYS + index * (int) sizeof(IntrRecord), (int) sizeof(int64_t), 1); }  // for internal node
+void SetHeadersPageNum(int64_t value) { SetInstancesOnDB(ADDR_HEADER, &value, TO_PAGE_NUM, sizeof(int64_t), 1); }
+void SetHeadersRootPage(Offset value) { SetInstancesOnDB(ADDR_HEADER, &value, TO_ROOT_PAGE_OFFSET, sizeof(Offset), 1); }
 
 void SetLeafRecord(Offset node_offset, int index, LeafRecord r) {
-	SetInstancesOnDB(node_offset, &r, TO_KEYS + index * (int) sizeof(LeafRecord), sizeof(LeafRecord),1);
+	SetInstancesOnDB(node_offset, &r, TO_KEYS + index * (int) sizeof(LeafRecord), sizeof(LeafRecord), 1);
 }
 void SetIntrRecord(Offset node_offset, int index, IntrRecord r) {
 	SetInstancesOnDB(node_offset, &r, TO_KEYS + index * (int) sizeof(IntrRecord), sizeof(IntrRecord), 1);
 }
 
 
-Offset GetNextFreePage	(Offset node_offset){ return GetOffsetOnDB(node_offset, TO_NEXT_FREE_PAGE_OFFSET); }
-Offset GetParentPage	(Offset node_offset){ return GetOffsetOnDB(node_offset, TO_PARENT_PAGE_OFFSET); }
-Offset GetRightSibling	(Offset node_offset){ return GetOffsetOnDB(node_offset, TO_RIGHT_SIBLING_OFFSET); }
-int32_t GetIsLeaf		(Offset node_offset){ return GetInt32OnDB(node_offset, TO_IS_LEAF); }
-int32_t GetKeyNum		(Offset node_offset){ return GetInt32OnDB(node_offset, TO_KEY_NUM); }
+Offset GetNextFreePage(Offset node_offset) { return GetOffsetOnDB(node_offset, TO_NEXT_FREE_PAGE_OFFSET); }
+Offset GetParentPage(Offset node_offset) { return GetOffsetOnDB(node_offset, TO_PARENT_PAGE_OFFSET); }
+Offset GetRightSibling(Offset node_offset) { return GetOffsetOnDB(node_offset, TO_RIGHT_SIBLING_OFFSET); }
+int32_t GetIsLeaf(Offset node_offset) { return GetInt32OnDB(node_offset, TO_IS_LEAF); }
+int32_t GetKeyNum(Offset node_offset) { return GetInt32OnDB(node_offset, TO_KEY_NUM); }
 int64_t GetHeadersPageNum() { return GetInt64OnDB(ADDR_HEADER, TO_PAGE_NUM); }
 Offset GetHeadersRootPage() { return GetOffsetOnDB(ADDR_HEADER, TO_ROOT_PAGE_OFFSET); }
 
@@ -835,18 +848,18 @@ int64_t GetKey(Offset node_offset, int index) {                                 
 		return GetInt64OnDB(node_offset, TO_KEYS + index * (int) sizeof(LeafRecord));
 	default:
 		printf("error! GetKey(Offset= 0x%lx(pagenum = %d), i); on this node, IsLeaf value is strange. not sure where to read\n",
-			node_offset, (int) (node_offset / PAGE_SIZE));
+			node_offset, (int)(node_offset / PAGE_SIZE));
 		exit(1);
 	}
 }
 LeafRecord * GetLeafRecordPtr(Offset node_offset, int index) {
 	return (LeafRecord*)GetVoidPtrOnDB(node_offset, TO_KEYS + index * sizeof(LeafRecord), sizeof(LeafRecord), 1);
 }
-IntrRecord * GetIntrRecordPtr(Offset node_offset, int index){
+IntrRecord * GetIntrRecordPtr(Offset node_offset, int index) {
 	return (IntrRecord*)GetVoidPtrOnDB(node_offset, TO_KEYS + index * sizeof(IntrRecord), sizeof(IntrRecord), 1);
 }
 char* GetValuePtr(Offset node_offset, int index) {
-	return (char*)		GetVoidPtrOnDB(node_offset, TO_VALUES + index * sizeof(IntrRecord), 1, VALUE_SIZE);
+	return (char*)GetVoidPtrOnDB(node_offset, TO_VALUES + index * sizeof(IntrRecord), 1, VALUE_SIZE);
 }
 
 Offset GetNewPage() {
@@ -877,7 +890,7 @@ void MoreFreePage() {
 		page_next = GetNextFreePage(page_cur);
 	}                                              //now page_cur is last free page(or header)
 	SetNextFreePage(page_cur, newpage_pos);			// set freepage 's liked list
-	
+
 	printf("debug| set newpage as offset=0x%lx, num=%d\n",
 		(unsigned long)newpage_pos, (int)newpage_pos / PAGE_SIZE);
 
@@ -901,20 +914,20 @@ void MoreFreePage() {
 	SetHeadersPageNum(limit);
 	printf("debug|More Free Page() end. lim was 0x%x == %dth\n", limit * PAGE_SIZE, limit);
 	printf("debug|heder's page num == %d\n", GetHeadersPageNum());
-	
+
 }
 
 
 
 void FileInit(FILE* dbfile) {
 	int i;
-	
+
 	for (i = 0; i < PAGE_SIZE; i++) {
 		empty_page[i] = 0xe;
 	}
 	fseek(dbfile, 0, SEEK_END);
 	fwrite(empty_page, PAGE_SIZE, 1, dbfile);
-	SetNextFreePage(ADDR_HEADER, NULL_PAGE);	
+	SetNextFreePage(ADDR_HEADER, NULL_PAGE);
 	SetHeadersRootPage(NULL_PAGE);
 	SetHeadersPageNum(1);
 
