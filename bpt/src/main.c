@@ -57,6 +57,7 @@ int main(int argc, char ** argv) {
 		FIND,
 		DELETE,
 		PRINT,
+		MEMORY,
 		OPERATION_COUNT
 	};
 	int op = OPERATION_COUNT;
@@ -65,6 +66,7 @@ int main(int argc, char ** argv) {
 	op_string[FIND]		= "find";
 	op_string[DELETE]	= "delete";
 	op_string[PRINT]	= "print";
+	op_string[MEMORY]	= "memory";
 
 	printf("> ");
 	while (scanf("%s", cmd) != EOF) {
@@ -88,6 +90,9 @@ int main(int argc, char ** argv) {
 			break;
 		case PRINT:
 			PrintTree();
+			break;
+		case MEMORY:
+			printf("function not yet established\n");
 			break;
 		case OPERATION_COUNT:   //DEFAULT
 								//usage_2();

@@ -36,7 +36,7 @@
 
 // Constants for DB file
 #define FREEPAGE_ADD_UNIT       16
-#define PAGE_SIZE               4096
+#define PAGE_SIZE               64 //4096
 #define RECORD_SIZE             128
 #define VALUE_SIZE              120
 #define INTERNAL_RECORD_SIZE    16
@@ -202,7 +202,7 @@ void SetParentPage(Offset node_offset, Offset value);
 void SetRightSibling(Offset node_offset, Offset value);
 void SetIsLeaf(Offset node_offset, int32_t value);
 void SetKeyNum(Offset node_offset, int32_t value);
-void SetHeadersPageNum(int32_t value);
+void SetHeadersPageNum(int64_t value);
 void SetHeadersRootPage(Offset value);
 void SetLeafRecord(Offset node_offset, int index, LeafRecord r);
 void SetIntrRecord(Offset node_offset, int index, IntrRecord r);
@@ -214,7 +214,7 @@ Offset GetParentPage(Offset node_offset);
 Offset GetRightSibling(Offset node_offset);
 int32_t GetIsLeaf(Offset node_offset);
 int32_t GetKeyNum(Offset node_offset);
-int32_t GetHeadersPageNum();
+int64_t GetHeadersPageNum();
 Offset GetHeadersRootPage();
 Offset  GetChild(Offset node_offset, int index);
 int64_t GetKey(Offset node_offset, int index);
