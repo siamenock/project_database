@@ -14,7 +14,7 @@ int main(int argc, char ** argv) {
 	char instruction;
 	char license_part;
 	char buffer[] = "asdf";
-	
+
 	//----------------------------------------------------------//
 	//                      presetting part                     //
 	//			open new file or open existing file				//
@@ -57,16 +57,16 @@ int main(int argc, char ** argv) {
 		FIND,
 		DELETE,
 		PRINT,
-		MEMORY,
+		XXD,
 		OPERATION_COUNT
 	};
 	int op = OPERATION_COUNT;
 	const char * op_string[3];   //operation string used by user
-	op_string[INSERT]	= "insert";
-	op_string[FIND]		= "find";
-	op_string[DELETE]	= "delete";
-	op_string[PRINT]	= "print";
-	op_string[MEMORY]	= "memory";
+	op_string[INSERT] = "insert";
+	op_string[FIND] = "find";
+	op_string[DELETE] = "delete";
+	op_string[PRINT] = "print";
+	op_string[XXD] = "xxd";
 
 	printf("> ");
 	while (scanf("%s", cmd) != EOF) {
@@ -91,8 +91,8 @@ int main(int argc, char ** argv) {
 		case PRINT:
 			PrintTree();
 			break;
-		case MEMORY:
-			printf("function not yet established\n");
+		case XXD:
+			XxdFile();
 			break;
 		case OPERATION_COUNT:   //DEFAULT
 								//usage_2();
@@ -140,3 +140,4 @@ int main(int argc, char ** argv) {
 
 	return EXIT_SUCCESS;
 }
+
