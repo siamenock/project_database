@@ -6,11 +6,12 @@
 
 
 int main(int argc, char ** argv) {
-	char input_file[64];
+	char file_name[64];
 	char cmd[128];
 	char val[VALUE_SIZE];
 	//node * root;
-	int input, range2;
+	int64_t input;
+	int range2;
 	char instruction;
 	char license_part;
 	char buffer[] = "asdf";
@@ -23,11 +24,11 @@ int main(int argc, char ** argv) {
 	while (scanf("%s", cmd)) {
 		printf("debug|scanf : %s\n", cmd);
 		if (strcmp(cmd, "open") == 0) {    //TODO: change into cmd_pre array and switch
-			scanf("%s", input_file);
-			printf("debug|filename : %s\n", input_file);
-			dbfile = fopen(input_file, "r+");
+			scanf("%s", file_name);
+			printf("debug|filename : %s\n", file_name);
+			dbfile = fopen(file_name, "r+");
 			if (dbfile == NULL) {
-				dbfile = fopen(input_file, "w+");
+				dbfile = fopen(file_name, "w+");
 				if (dbfile == NULL) {
 					perror("Failure  open input file.");
 					exit(EXIT_FAILURE);
@@ -58,14 +59,16 @@ int main(int argc, char ** argv) {
 		DELETE,
 		PRINT,
 		XXD,
+		DROP,
 		OPERATION_COUNT
 	};
 	int op = OPERATION_COUNT;
-	const char * op_string[3];   //operation string used by user
+	const char * op_string[3];   //operation string input by user
 	op_string[INSERT] = "insert";
 	op_string[FIND] = "find";
 	op_string[DELETE] = "delete";
 	op_string[PRINT] = "print";
+	op_string[DROP] = "drop";
 	op_string[XXD] = "xxd";
 
 	printf("> ");
@@ -82,11 +85,19 @@ int main(int argc, char ** argv) {
 			//print_tree(root);
 			break;
 		case INSERT:
-			scanf("%d %s", &input, val);
+			scanf("%I64i %s", &input, val);
+			printf("debug| insert check: key, val -> %I64i, %s\n", input, val);
 			insert(input, val);
 			break;
 		case FIND:
-			//TODO
+			scanf("%I64i", &input);
+			char* val_ptr = find(input);
+			if (val_ptr == NULL) {
+				printf("key%5d not exist!\n", input);
+			} else {
+				printf("exist! value : %s", val_ptr);
+				free(val_ptr);
+			}
 			break;
 		case PRINT:
 			PrintTree();
@@ -94,6 +105,10 @@ int main(int argc, char ** argv) {
 		case XXD:
 			XxdFile();
 			break;
+		case DROP:
+			fclose(dbfile);
+			remove(file_name);
+			return 0;
 		case OPERATION_COUNT:   //DEFAULT
 								//usage_2();
 			printf("your input : %s\nusage is wrong\n", cmd);
