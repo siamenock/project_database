@@ -264,7 +264,9 @@ int insert_into_leaf(Offset leaf, LeafRecord r) {
 		SetLeafRecord(leaf, i, * move);
 		free(move);
 	}
-	SetLeafRecord(leaf, insert_index, r);
+	//SetLeafRecord(leaf, insert_index, r);
+	SetLeafKey(leaf, insert_index, r.key);
+	SetValue(leaf, insert_index, r.value);
 	SetKeyNum(leaf, key_num + 1);
 
 
@@ -859,24 +861,22 @@ void SetKeyNum		(Offset node_offset, int32_t value) { SetInstancesOnDB(node_offs
 void SetChild		(Offset node_offset, int index, Offset value) { SetInstancesOnDB(node_offset, &value, TO_CHILDREN + index * (int) sizeof(IntrRecord), (int) sizeof(Offset), 1); }  // for internal node
 void SetHeadersPageNum(int64_t value) { SetInstancesOnDB(ADDR_HEADER, &value, TO_PAGE_NUM, sizeof(int64_t), 1); }
 void SetHeadersRootPage(Offset value) { SetInstancesOnDB(ADDR_HEADER, &value, TO_ROOT_PAGE_OFFSET, sizeof(Offset), 1); }
-
+void SetIntrKey(Offset node_offset, int index, int64_t value) { SetInstancesOnDB(node_offset, &value, TO_KEYS + index * (int) sizeof(IntrRecord), (int) sizeof(int64_t), 1); }
+void SetLeafKey(Offset node_offset, int index, int64_t value) { SetInstancesOnDB(node_offset, &value, TO_KEYS  + index * (int) sizeof(LeafRecord), sizeof(int64_t), 1); }
+void SetValue(Offset node_offset, int index, char* value)	  { SetInstancesOnDB(node_offset, &value, TO_VALUES+ index * (int) sizeof(LeafRecord), VALUE_SIZE, 1); }
 void SetLeafRecord(Offset node_offset, int index, LeafRecord r) {
-	SetInstancesOnDB(node_offset, &(r.key),   TO_KEYS   + index * (int) sizeof(LeafRecord), sizeof(int64_t), 1);
-	SetInstancesOnDB(node_offset, &(r.value), TO_VALUES + index * (int) sizeof(LeafRecord), VALUE_SIZE     , 1);
+	SetLeafKey(node_offset, index, r.key);
+	SetValue  (node_offset, index, r.value);
 }
 void SetIntrRecord(Offset node_offset, int index, IntrRecord r) {
-	SetInstancesOnDB(node_offset, &(r.key   ), TO_KEYS     + index * (int) sizeof(IntrRecord), sizeof(int64_t), 1);
-	SetInstancesOnDB(node_offset, &(r.offset), TO_CHILDREN + index * (int) sizeof(IntrRecord), sizeof(Offset ), 1);
+	SetIntrKey(node_offset, index, r.key);
+	SetChild(node_offset, index + 1, r.offset);
 }
-void SetKey(Offset node_offset, int index, int64_t value) {		//TODO
+void SetKey(Offset node_offset, int index, int64_t value) {
 	switch (GetNodeType(node_offset)) {
-	case PAGE_INTERNAL:
-		SetInstancesOnDB(node_offset, &value, TO_KEYS + index * (int) sizeof(IntrRecord), (int) sizeof(int64_t), 1);
-	case PAGE_LEAF:
-		SetInstancesOnDB(node_offset, &value, TO_KEYS + index * (int) sizeof(LeafRecord), (int) sizeof(int64_t), 1);
-	default:
-		printf("error! GetKey(Offset= 0x%lx(pagenum = %d), i); on this node, IsLeaf value is strange. not sure where to read\n",node_offset, (int)(node_offset / PAGE_SIZE));
-		exit(1);
+	case PAGE_INTERNAL:		SetIntrKey(node_offset, index, value);	break;
+	case PAGE_LEAF:			SetLeafKey(node_offset, index, value);	break;
+	default:				printf("SetKey() err. can't know what type of page is\n");
 	}	
 }  // for internal node
 
@@ -888,28 +888,29 @@ int32_t GetKeyNum(Offset node_offset) { return GetInt32OnDB(node_offset, TO_KEY_
 int64_t GetHeadersPageNum() { return GetInt64OnDB(ADDR_HEADER, TO_PAGE_NUM); }
 Offset GetHeadersRootPage() { return GetOffsetOnDB(ADDR_HEADER, TO_ROOT_PAGE_OFFSET); }
 Offset  GetChild(Offset node_offset, int index) { return GetOffsetOnDB(node_offset, TO_CHILDREN + index * (int) sizeof(IntrRecord)); }  // for internal node
+int64_t GetIntrKey(Offset node_offset, int index) { return GetInt64OnDB(node_offset, TO_KEYS + index * (int) sizeof(IntrRecord)); }
+int64_t GetLeafKey(Offset node_offset, int index) { return GetInt64OnDB(node_offset, TO_KEYS + index * (int) sizeof(LeafRecord)); }
 int64_t GetKey(Offset node_offset, int index) {                                                                                 //for both node
 	switch (GetNodeType(node_offset)) {
-	case PAGE_INTERNAL:
-		return GetInt64OnDB(node_offset, TO_KEYS + index * (int) sizeof(IntrRecord));
-	case PAGE_LEAF:
-		return GetInt64OnDB(node_offset, TO_KEYS + index * (int) sizeof(LeafRecord));
-	default:
-		printf("error! GetKey(Offset= 0x%lx(pagenum = %d), i); on this node, IsLeaf value is strange. not sure where to read\n",node_offset, (int)(node_offset / PAGE_SIZE));
-		exit(1);
+	case PAGE_INTERNAL:	return GetIntrKey(node_offset, index);
+	case PAGE_LEAF:		return GetLeafKey(node_offset, index);
+	default:			printf("GetKey() ERROR\n");
 	}
 }
 LeafRecord * GetLeafRecordPtr(Offset node_offset, int index) {
 	LeafRecord* value = (LeafRecord*)malloc (sizeof(LeafRecord) ) ;
-	GetVoidValOnDB(node_offset, &(value->key), TO_KEYS  + index * sizeof(LeafRecord), sizeof(int64_t), 1);
-	GetVoidValOnDB(node_offset, &(value->key), TO_VALUES+ index * sizeof(LeafRecord), VALUE_SIZE, 1);
+	value->key	 = GetLeafKey(node_offset, index);
+	GetLeafValue(node_offset, value->value, index);
 	return value;
 }
 IntrRecord * GetIntrRecordPtr(Offset node_offset, int index) {
 	IntrRecord* value = (IntrRecord*)malloc(sizeof(IntrRecord));
 	GetVoidValOnDB(node_offset, &(value->key), TO_KEYS     + index * sizeof(IntrRecord), sizeof(int64_t), 1);
-	GetVoidValOnDB(node_offset, &(value->key), TO_CHILDREN + index * sizeof(IntrRecord), sizeof(Offset ), 1);
+	GetVoidValOnDB(node_offset, &(value->offset), TO_CHILDREN + index * sizeof(IntrRecord), sizeof(Offset ), 1);
 	return value;
+}
+void GetLeafValue(Offset node_offset, char alloced[], int index) {
+	GetVoidValOnDB	   (node_offset, alloced, TO_VALUES + index * sizeof(IntrRecord), 1, VALUE_SIZE);
 }
 char* GetValuePtr(Offset node_offset, int index) {
 	return (char*)GetVoidPtrOnDB(node_offset, TO_VALUES + index * sizeof(IntrRecord), 1, VALUE_SIZE);
