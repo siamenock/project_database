@@ -214,6 +214,11 @@ void SetLeafRecord(Offset node_offset, int index, LeafRecord r);
 void SetIntrRecord(Offset node_offset, int index, IntrRecord r);
 void SetChild(Offset node_offset, int index, Offset value);
 void SetKey(Offset node_offset, int index, int64_t value);
+void SetIntrKey(Offset node_offset, int index, int64_t value);
+void SetLeafKey(Offset node_offset, int index, int64_t value);
+void SetValue(Offset node_offset, int index, char* value);
+
+
 
 Offset GetNextFreePage(Offset node_offset);
 Offset GetParentPage(Offset node_offset);
@@ -224,6 +229,7 @@ int64_t GetHeadersPageNum();
 Offset GetHeadersRootPage();
 Offset  GetChild(Offset node_offset, int index);
 int64_t GetKey(Offset node_offset, int index);
+void GetLeafValue(Offset node_offset, char alloced[], int index);
 char* GetValuePtr(Offset node_offset, int index);
 LeafRecord * GetLeafRecordPtr(Offset node_offset, int index);
 IntrRecord * GetIntrRecordPtr(Offset node_offset, int index);
