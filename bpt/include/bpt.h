@@ -41,13 +41,19 @@
 #define VALUE_SIZE              120
 #define INTERNAL_RECORD_SIZE    16
 
-#define LEAF_DEGREE             31
-#define INTR_DEGREE             248
+#define LEAF_DEGREE             3//for debug //31
+#define INTR_DEGREE             3//for debug//248
 
 #define ADDR_HEADER             0
 #define NULL_PAGE               0
-#define DEF_INTERNAL            0
-#define DEF_LEAF                1
+enum {
+	PAGE_FREE = 0,
+	PAGE_INTERNAL,
+	PAGE_LEAF,
+	PAGE_HEADER
+};
+//#define DEF_INTERNAL            0
+//#define DEF_LEAF                1
 #define SUCCESS                 0
 
 #define TO_NEXT_FREE_PAGE_OFFSET 0      // Header   | Free    use it
@@ -200,7 +206,7 @@ int32_t GetInt32OnDB(Offset node_offset, int instance_pos);
 void SetNextFreePage(Offset node_offset, Offset value);
 void SetParentPage(Offset node_offset, Offset value);
 void SetRightSibling(Offset node_offset, Offset value);
-void SetIsLeaf(Offset node_offset, int32_t value);
+void SetNodeType(Offset node_offset, int32_t value);
 void SetKeyNum(Offset node_offset, int32_t value);
 void SetHeadersPageNum(int64_t value);
 void SetHeadersRootPage(Offset value);
@@ -212,7 +218,7 @@ void SetKey(Offset node_offset, int index, int64_t value);
 Offset GetNextFreePage(Offset node_offset);
 Offset GetParentPage(Offset node_offset);
 Offset GetRightSibling(Offset node_offset);
-int32_t GetIsLeaf(Offset node_offset);
+int32_t GetNodeType(Offset node_offset);
 int32_t GetKeyNum(Offset node_offset);
 int64_t GetHeadersPageNum();
 Offset GetHeadersRootPage();
