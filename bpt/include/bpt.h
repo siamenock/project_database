@@ -229,6 +229,8 @@ int64_t GetHeadersPageNum();
 Offset GetHeadersRootPage();
 Offset  GetChild(Offset node_offset, int index);
 int64_t GetKey(Offset node_offset, int index);
+int64_t GetLeafKey(Offset node_offset, int index);
+int64_t GetIntrKey(Offset node_offset, int index);
 void GetLeafValue(Offset node_offset, char alloced[], int index);
 char* GetValuePtr(Offset node_offset, int index);
 LeafRecord * GetLeafRecordPtr(Offset node_offset, int index);
