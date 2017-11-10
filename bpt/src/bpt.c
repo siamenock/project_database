@@ -174,7 +174,7 @@ Offset find_leaf(int64_t key) {
 		i = 0;
 		int key_num = GetKeyNum(c);
 		while (i < key_num) {
-			if (GetKey(c, i) < key) {
+			if (GetKey(c, i) <= key) {
 				i++;
 			}
 			else {
@@ -266,19 +266,22 @@ int insert_into_leaf(Offset leaf, LeafRecord r) {
 	}
 	//SetLeafRecord(leaf, insert_index, r);
 	SetLeafKey(leaf, insert_index, r.key);
-	SetValue(leaf, insert_index, r.value);
+	//SetValue(leaf, insert_index, r.value);
+	
+	int64_t key = GetKey(leaf, insert_index);
+	//printf("debug| insert check: key, %I64i\n", key, r);
 	SetKeyNum(leaf, key_num + 1);
 
 
 
 
-	printf("debug| insert check: key, val -> %I64i, %s\n", r.key, r.value);
-	int64_t key = GetKey(leaf,insert_index);
+	//printf("debug| insert check: key, val -> %I64i, %s\n", r.key, r.value);
+	key = GetKey(leaf,insert_index);
 	char*	val = GetValuePtr(leaf, insert_index);
-	printf("debug| insert check: key, val -> %I64i, %s\n", key, val);
+	//printf("debug| insert check: key, val -> %I64i, %s\n", key, val);
 	free(val);
 	LeafRecord* val_lr = GetLeafRecordPtr(leaf, insert_index);
-	printf("debug| insert check: key, val -> %I64i, %s\n", val_lr->key, val_lr->value);
+	//printf("debug| insert check: key, val -> %I64i, %s\n", val_lr->key, val_lr->value);
 	
 	return SUCCESS;
 }
@@ -388,6 +391,7 @@ if (node == NULL_PAGE) {
 			free(rp);
 		}                               // and insert it
 		SetIntrRecord(node, i, *new_record);
+		free(new_record);
 		SetKeyNum(node, key_num + 1);
 		return SUCCESS;                 // jobs done
 
@@ -754,6 +758,7 @@ void SetInstancesOnDB(Offset node_offset, void* value, int instance_pos, size_t 
 	int sum = 0;
 	int add = 0;
 	int wait_counter;
+	int64_t debug_val = *((int64_t*) value);
 	fseek(dbfile, node_offset + instance_pos, SEEK_SET);
 
 	while (sum < (int)count && 0 <= add) {
@@ -776,7 +781,14 @@ void SetInstancesOnDB(Offset node_offset, void* value, int instance_pos, size_t 
 			return;
 		}
 	}
-
+	//debug
+	fseek(dbfile, node_offset + instance_pos, SEEK_SET);
+	fread(value, size, count, dbfile);
+	int64_t debug_val2 = *((int64_t*)value);
+	if (debug_val != debug_val2 || (
+		((int)size)==8 && (debug_val < -100 || 1000 < debug_val))	) {
+		printf("FUCK! fwrite int64 is suck!\n");
+	}
 	if (0 <= add) {
 		return;
 	}
@@ -823,18 +835,18 @@ int64_t GetInt64OnDB(Offset node_offset, int instance_pos) {
 }
 //must free allocated return value!!!!!!
 
-void* GetVoidValOnDB(Offset node_offset, char* alloced, int instance_pos, size_t size, size_t count) {
+void* GetVoidValOnDB(Offset node_offset, char* buff, int instance_pos, size_t size, size_t count) {
 	fseek(dbfile, node_offset + instance_pos, SEEK_SET);
 	int sum = 0, add = 0;
 	while (sum < (int)count) {
-		add = fread(alloced + (sum * size), size, count - sum, dbfile);
+		add = fread(buff + (sum * size), size, count - sum, dbfile);
 		sum += add;
 		if (add < 0) {
 			printf("ERROR: GetVoidPtrOnDB(node=%u, pos = %d) -> return %u\n",
-				(unsigned int)node_offset, instance_pos, (unsigned int) alloced[0]);
+				(unsigned int)node_offset, instance_pos, (unsigned int) buff[0]);
 		}
 	}
-	return (void *)alloced;
+	return (void *)buff;
 }
 void * GetVoidPtrOnDB(Offset node_offset, int instance_pos, size_t size, size_t count) {
 	char * value = (char *)malloc(size * count);		// to move 1 Byte per ++, define value as char pointer
@@ -861,9 +873,13 @@ void SetKeyNum		(Offset node_offset, int32_t value) { SetInstancesOnDB(node_offs
 void SetChild		(Offset node_offset, int index, Offset value) { SetInstancesOnDB(node_offset, &value, TO_CHILDREN + index * (int) sizeof(IntrRecord), (int) sizeof(Offset), 1); }  // for internal node
 void SetHeadersPageNum(int64_t value) { SetInstancesOnDB(ADDR_HEADER, &value, TO_PAGE_NUM, sizeof(int64_t), 1); }
 void SetHeadersRootPage(Offset value) { SetInstancesOnDB(ADDR_HEADER, &value, TO_ROOT_PAGE_OFFSET, sizeof(Offset), 1); }
-void SetIntrKey(Offset node_offset, int index, int64_t value) { SetInstancesOnDB(node_offset, &value, TO_KEYS + index * (int) sizeof(IntrRecord), (int) sizeof(int64_t), 1); }
+void SetIntrKey(Offset node_offset, int index, int64_t value) { SetInstancesOnDB(node_offset, &value, TO_KEYS + index * (int) sizeof(IntrRecord), sizeof(int64_t), 1); }
 void SetLeafKey(Offset node_offset, int index, int64_t value) { SetInstancesOnDB(node_offset, &value, TO_KEYS  + index * (int) sizeof(LeafRecord), sizeof(int64_t), 1); }
-void SetValue(Offset node_offset, int index, char* value)	  { SetInstancesOnDB(node_offset, &value, TO_VALUES+ index * (int) sizeof(LeafRecord), VALUE_SIZE, 1); }
+void SetValue(Offset node_offset, int index, char* value)	  {
+	int64_t pos = TO_VALUES + (index * (int) sizeof(LeafRecord));
+	int len = strlen(value);
+	SetInstancesOnDB(node_offset, value, TO_VALUES+ (index * (int) sizeof(LeafRecord)), strlen(value), 1);
+}
 void SetLeafRecord(Offset node_offset, int index, LeafRecord r) {
 	SetLeafKey(node_offset, index, r.key);
 	SetValue  (node_offset, index, r.value);
@@ -905,12 +921,12 @@ LeafRecord * GetLeafRecordPtr(Offset node_offset, int index) {
 }
 IntrRecord * GetIntrRecordPtr(Offset node_offset, int index) {
 	IntrRecord* value = (IntrRecord*)malloc(sizeof(IntrRecord));
-	GetVoidValOnDB(node_offset, &(value->key), TO_KEYS     + index * sizeof(IntrRecord), sizeof(int64_t), 1);
-	GetVoidValOnDB(node_offset, &(value->offset), TO_CHILDREN + index * sizeof(IntrRecord), sizeof(Offset ), 1);
+	value->key		= GetIntrKey(node_offset, index);
+	value->offset	= GetChild	(node_offset, index + 1);
 	return value;
 }
-void GetLeafValue(Offset node_offset, char alloced[], int index) {
-	GetVoidValOnDB	   (node_offset, alloced, TO_VALUES + index * sizeof(IntrRecord), 1, VALUE_SIZE);
+void GetLeafValue(Offset node_offset, char* buff, int index) {
+	GetVoidValOnDB	   (node_offset, buff, TO_VALUES + index * sizeof(IntrRecord), 1, VALUE_SIZE);
 }
 char* GetValuePtr(Offset node_offset, int index) {
 	return (char*)GetVoidPtrOnDB(node_offset, TO_VALUES + index * sizeof(IntrRecord), 1, VALUE_SIZE);
