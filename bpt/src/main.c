@@ -60,17 +60,22 @@ int main(int argc, char ** argv) {
 		PRINT,
 		XXD,
 		DROP,
+		TEST1,
+		TEST2,
 		OPERATION_COUNT
 	};
 	int op = OPERATION_COUNT;
-	const char * op_string[3];   //operation string input by user
-	op_string[INSERT] = "insert";
-	op_string[FIND] = "find";
-	op_string[DELETE] = "delete";
-	op_string[PRINT] = "print";
-	op_string[DROP] = "drop";
-	op_string[XXD] = "xxd";
-
+	const char * op_string[] = {
+		"insert",	//op_string[INSERT]
+		"find",		//op_string[FIND]
+		"delete",	//op_string[DELETE] 
+		"print",	//op_string[PRINT]
+		"xxd",		//op_string[XXD] 
+		"drop",		//op_string[DROP] 
+		"test1",
+		"test2"
+	};   //operation string input by user
+	
 	printf("> ");
 	while (scanf("%s", cmd) != EOF) {
 		for (op = 0; op < OPERATION_COUNT; op++) {
@@ -86,8 +91,8 @@ int main(int argc, char ** argv) {
 			break;
 		case INSERT:
 			scanf("%I64i %s", &input, val);
-			printf("debug| insert check: key, val -> %I64i, %s\n", input, val);
 			insert(input, val);
+			PrintTree();
 			break;
 		case FIND:
 			scanf("%I64i", &input);
@@ -109,8 +114,62 @@ int main(int argc, char ** argv) {
 			fclose(dbfile);
 			remove(file_name);
 			return 0;
+		case TEST1:
+			{
+				IntrRecord  a[3];
+				IntrRecord *b[3];
+				int i;
+				for (i = 0; i < 3; i++) {
+					a[i].key	= i * 10;
+					a[i].offset = PAGE_SIZE * (i+1);
+					SetIntrRecord(PAGE_SIZE, i, a[i]);
+					b[i] = GetIntrRecordPtr(PAGE_SIZE, i);
+					continue;
+				}
+				i = i;
+				for (i = 0; i < 3; i++) {
+					b[i] = GetIntrRecordPtr(PAGE_SIZE, i);
+				}
+				i = i;
+				SetKeyNum(PAGE_SIZE, 3);
+				break;
+			}
+		case TEST2:
+		{	// mem leaking here!
+			LeafRecord  a[6];
+			LeafRecord *b[6];
+			int i;
+			for (i = 0; i < 3; i++) {
+				a[i].key = i * 5;
+				strcpy(a[i].value, "aaaaaaaaaa");
+				SetLeafRecord(PAGE_SIZE, i, a[i]);
+				b[i] = GetLeafRecordPtr(PAGE_SIZE, i);
+				continue;
+			}
+			i = i;
+			for (i = 3; i < 6; i++) {
+				b[i] = (LeafRecord *)malloc(sizeof(LeafRecord));
+				a[i].key = i * 5;
+				strcpy(a[i].value, "aaaaaaaaaa");
+				//SetLeafRecord(PAGE_SIZE, i, a[i]);
+				SetLeafKey(PAGE_SIZE, i, a[i].key);
+				SetValue(PAGE_SIZE, i, a[i].value);
+				b[i]->key = GetLeafKey(PAGE_SIZE, i);
+				GetLeafValue(PAGE_SIZE, b[i]->value, i);
+				//b[i] = GetLeafRecordPtr(PAGE_SIZE, i);
+				continue;
+			}
+			i = i;
+
+			for (i = 0; i < 6; i++) {
+				b[i] = GetLeafRecordPtr(PAGE_SIZE, i);
+			}
+			i = i;
+			SetKeyNum(PAGE_SIZE,  6);
+			break;
+		}
+		default:
 		case OPERATION_COUNT:   //DEFAULT
-								//usage_2();
 			printf("your input : %s\nusage is wrong\n", cmd);
 			break;
 			/*
