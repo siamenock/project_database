@@ -77,22 +77,22 @@ int main(int argc, char ** argv) {
 		}
 		switch (op) {
 		case DELETE:
-			scanf("%d", &input);
+			scanf("%lld", &input);
 			//root = delete(root, input);
 			//print_tree(root);
 			break;
 		case INSERT:
-			scanf("%I64i %s", &input, val);
+			scanf("%lld %s", &input, val);
 			insert(input, val);
 			PrintTree();
 			break;
 		case FIND:
-			scanf("%I64i", &input);
-			char* val_ptr = find(input);
+			scanf("%lld", &input);
+			char* val_ptr = find (input);
 			if (val_ptr == NULL) {
-				printf("key%5d not exist!\n", input);
+				printf("key%5lld not exist!\n", input);
 			} else {
-				printf("exist! value : %s", val_ptr);
+				printf("exist! value : %s\n", val_ptr);
 				free(val_ptr);
 			}
 			break;
