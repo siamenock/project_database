@@ -52,6 +52,7 @@ enum {
 	PAGE_LEAF,
 	PAGE_HEADER
 };
+
 //#define DEF_INTERNAL            0
 //#define DEF_LEAF                1
 #define SUCCESS                 0
@@ -160,7 +161,7 @@ typedef struct record {
 * to prevent using this file pointer on every read/write, It became global
 */
 extern FILE* dbfile;
-
+extern int debug_enable;
 
 char empty_page[PAGE_SIZE];
 
@@ -196,6 +197,7 @@ int insert_into_parent(Offset node, Offset cur_child, Offset new_child);
 
 
 //under here, my funtions
+int open_db(char file_name[]);
 void FileInit(FILE* fp);
 Offset GetNewPage();
 void MoreFreePage();
