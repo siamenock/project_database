@@ -5,7 +5,7 @@
 #include "bpt.h"
 #include <stdio.h>
 
-
+int debug_enable = 1;
 FILE * dbfile = NULL;
 
 // FUNCTION DEFINITIONS.
@@ -54,17 +54,16 @@ Offset seek(Node ** q_pointer) {
 		return (*q_pointer)->offset;
 	}
 }
-
 void PrintTree() {
 	int depth = 0;
 	Node * q1 = NULL;
 	Node * q2 = NULL;
 	enqueue(&q1, GetHeadersRootPage());
 	Offset ofs;
-	printf("debug| call PrintTree()\n");
+	//printf("debug| call PrintTree()\n");
 	// this while loop : move 1 depth down
 	for (depth = 0; q1 != NULL; depth++) {
-		printf("debug| PrintTree() : start next depth==%2d from page %d\n", depth, seek(&q1) / PAGE_SIZE);
+		//printf("debug| PrintTree() : start next depth==%2d from page %d\n", depth, seek(&q1) / PAGE_SIZE);
 		// this while loop : move 1 node right
 		// nodes of this depth are in q1
 		// delete them and enque next depth nodes in q2
@@ -186,8 +185,8 @@ Offset find_leaf(int64_t key) {
 	return c;
 }
 
-/* Finds and returns the record to which
-* a key refers.
+/* Finds and returns the value
+*  which key refers.
 */
 char* find(int64_t key) {
 	int i = 0;
@@ -314,7 +313,7 @@ int insert_into_leaf_after_splitting(Offset leaf, LeafRecord r) {
 		}
 		temp_records[j] = GetLeafRecordPtr(leaf, i);
 	}
-	if (i == insert_index) {
+	if (i == j) {
 		temp_records[j] = new_record;
 		j++;
 	}
@@ -408,7 +407,8 @@ if (node == NULL_PAGE) {
 			temp_records[j] = GetIntrRecordPtr(node, i);
 		}
 		if (i == insert_index) { temp_records[j++] = new_record; }
-		int split = cut(INTR_DEGREE);
+		int split = cut(INTR_DEGREE);		//now ready to re-copy
+
 		for (i = 0; i < split; i++) {
 			SetIntrRecord(node, i, *temp_records[i]);
 			free(temp_records[i]);
@@ -417,27 +417,22 @@ if (node == NULL_PAGE) {
 		
 		Offset new_sibling = make_node();
 		SetChild(new_sibling, 0, temp_records[i]->offset);
+		SetParentPage(temp_records[i]->offset, new_sibling);
 		free(temp_records[i++]);				// not contains half point key
 
 		SetKeyNum(new_sibling, key_num - split);	//so +1 not included here
 
-		if (insert_index < split) {	SetParentPage(new_child, node);
-		} else {					SetParentPage(new_child, new_sibling);  }
+		
 
 		for (i = split + 1; i < key_num + 1; i++) {
 			SetIntrRecord(new_sibling, i - (split + 1), *temp_records[i]);
+			SetParentPage(temp_records[i]->offset, new_sibling);
 			free(temp_records[i]);
 		}
 
 		
 
 		Offset parent = GetParentPage(node);
-		printf("B4 insert into parent again\n");
-		printf("xxd parent    : "); XxdPage(parent);
-		printf("xxd ori child : "); XxdPage(node);
-		printf("                min key == %lld\n", GetMinKeyFromChildren(node));
-		printf("xxd new child : "); XxdPage(new_sibling);
-		printf("                min key == %lld\n", GetMinKeyFromChildren(new_sibling));
 
 		int ret = insert_into_parent(parent, node, new_sibling);
 
@@ -498,7 +493,7 @@ int insert(int64_t key, char value[VALUE_SIZE]) {
 	for (i = 0; i < VALUE_SIZE; i++)
 		r.value[i] = value[i];  //rec will be only use in this function.
 	Offset leaf;
-	printf("debug| insert check: key, val -> %I64i, %s\n", r.key, r.value);
+	//printf("debug| insert check: key, val -> %I64i, %s\n", r.key, r.value);
 
 	if (GetHeadersRootPage() == NULL_PAGE) { // case : no root yet!
 		Offset header = make_leaf();
@@ -511,7 +506,6 @@ int insert(int64_t key, char value[VALUE_SIZE]) {
 	char* find_result = find(key);
 	if (find_result != NULL) {   // in case of duplication
 		free(find_result);
-		
 		return -1;              // ignore input command
 	}
 
@@ -525,11 +519,12 @@ int insert(int64_t key, char value[VALUE_SIZE]) {
 	int ret;
 	if (key_num < LEAF_DEGREE) {   // Case: leaf has room for key and pointer.
 		ret = insert_into_leaf(leaf, r);
-		
+		fflush(dbfile);
 		return ret;
 
 	} else {                            // Case:  leaf must be split.
 		ret = insert_into_leaf_after_splitting(leaf, r);
+		fflush(dbfile);
 		return ret;
 	}
 	
@@ -735,29 +730,36 @@ return NULL;
 
 
 //under here, my funtions
-/*
-//these code is in bpt.h
-#define FIRST_ASSIGNE_PAGE_NUM  16
-#define PAGE_SIZE               4096
-#define (int) sizeof(LeafRecord)             256
 
-#define TO_NEXT_FREE_PAGE_OFFSET 0      // Header   | Free    use it
-#define TO_PARENT_PAGE_OFFSET    0      // Internal | Leaf
-#define TO_ROOT_PAGE_OFFSET      8      // Header
-#define TO_IS_LEAF               8      // Internal | Leaf
-#define TO_KEY_NUM               12     // Internal | Leaf
-#define TO_RIGHT_SIBLING_OFFSET  120    // Leaf
-#define TO_KEYS                  128    // Leaf
-#define TO_VALUES                136    // Leaf
-#define TO_LEFT_CHILD_OFFSET     120
-*/
-
+int open_db(char file_name[]) {
+	//printf("debug|filename : %s\n", file_name);
+	dbfile = fopen(file_name, "r+");
+	if (dbfile == NULL) {
+		//file not exist
+		dbfile = fopen(file_name, "w+");
+		if (dbfile == NULL) {
+			//perror("Failure  open new input file.");
+			//exit(EXIT_FAILURE);
+			return 1;
+		} else {
+			FileInit(dbfile);
+			//printf("open NEW FILE\n");
+			fflush(dbfile);
+			return 0;
+		}
+	} else {
+		//printf("opening EXISTING FILE\n");
+		//fflush(dbfile);
+		return 0;
+	}
+	return 1;
+}
 
 //TODO : make it work without OS's buffering
 void SetInstancesOnDB(Offset node_offset, void* value, int instance_pos, size_t size, size_t count) {
 	int sum = 0;
 	int add = 0;
-	int wait_counter;
+	int wait_counter = 0;
 	int64_t debug_val = *((int64_t*) value);
 	fseek(dbfile, node_offset + instance_pos, SEEK_SET);
 
@@ -876,7 +878,8 @@ void SetHeadersRootPage(Offset value) { SetInstancesOnDB(ADDR_HEADER, &value, TO
 void SetIntrKey(Offset node_offset, int index, int64_t value) { SetInstancesOnDB(node_offset, &value, TO_KEYS + index * (int) sizeof(IntrRecord), sizeof(int64_t), 1); }
 void SetLeafKey(Offset node_offset, int index, int64_t value) { SetInstancesOnDB(node_offset, &value, TO_KEYS  + index * (int) sizeof(LeafRecord), sizeof(int64_t), 1); }
 void SetValue(Offset node_offset, int index, char* value)	  {
-	int64_t pos = TO_VALUES + (index * (int) sizeof(LeafRecord));
+	int64_t pos = node_offset + TO_VALUES + (index * (int) sizeof(LeafRecord));
+	printf("setting Leaf value at 0x%llx\n", pos);
 	int len = strlen(value);
 	SetInstancesOnDB(node_offset, value, TO_VALUES+ (index * (int) sizeof(LeafRecord)), strlen(value), 1);
 }
@@ -926,10 +929,12 @@ IntrRecord * GetIntrRecordPtr(Offset node_offset, int index) {
 	return value;
 }
 void GetLeafValue(Offset node_offset, char* buff, int index) {
-	GetVoidValOnDB	   (node_offset, buff, TO_VALUES + index * sizeof(IntrRecord), 1, VALUE_SIZE);
+	int64_t pos = node_offset + TO_VALUES + (index * (int) sizeof(LeafRecord));
+	printf("getting Leaf value at 0x%llx\n", pos);
+	GetVoidValOnDB	   (node_offset, buff, TO_VALUES + index * sizeof(LeafRecord), 1, VALUE_SIZE);
 }
 char* GetValuePtr(Offset node_offset, int index) {
-	return (char*)GetVoidPtrOnDB(node_offset, TO_VALUES + index * sizeof(IntrRecord), 1, VALUE_SIZE);
+	return (char*)GetVoidPtrOnDB(node_offset, TO_VALUES + index * sizeof(LeafRecord), 1, VALUE_SIZE);
 }
 
 Offset GetNewPage() {
@@ -947,10 +952,10 @@ Offset GetNewPage() {
 
 
 void MoreFreePage() {
-	printf("debug| MoreFreePage() called\n");
+	//printf("debug| MoreFreePage() called\n");
 	int64_t page_num = GetHeadersPageNum();
 	Offset newpage_pos = page_num * PAGE_SIZE;
-	printf("debug| B4change : headers pagenum was %lld\n", page_num);
+	//printf("debug| B4change : headers pagenum was %lld\n", page_num);
 
 
 	Offset page_cur = ADDR_HEADER;                  //search from header
@@ -961,8 +966,7 @@ void MoreFreePage() {
 	}                                              //now page_cur is last free page(or header)
 	SetNextFreePage(page_cur, newpage_pos);			// set freepage 's liked list
 
-	printf("debug| set newpage as offset=0x%lx, num=%d\n",
-		(unsigned long)newpage_pos, (int)newpage_pos / PAGE_SIZE);
+	//printf("debug| set newpage as offset=0x%lx, num=%d\n",(unsigned long)newpage_pos, (int)newpage_pos / PAGE_SIZE);
 
 	int64_t limit = page_num + FREEPAGE_ADD_UNIT;
 	int64_t count = page_num;
@@ -980,8 +984,8 @@ void MoreFreePage() {
 	SetNextFreePage(newpage_pos, NULL_PAGE);
 
 	SetHeadersPageNum(limit);
-	printf("debug|More Free Page() end. lim was 0x%llx == %lldth\n", limit * PAGE_SIZE, limit);
-	printf("debug|heder's page num == %lld\n", GetHeadersPageNum());
+	//printf("debug|More Free Page() end. lim was 0x%llx == %lldth\n", limit * PAGE_SIZE, limit);
+	//printf("debug|heder's page num == %lld\n", GetHeadersPageNum());
 
 }
 
