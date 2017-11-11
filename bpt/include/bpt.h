@@ -190,10 +190,12 @@ int cut( int length );
 Offset make_node(void);
 Offset make_leaf(void);
 
+char* find(int64_t key);
+int insert(int64_t key, char value[VALUE_SIZE]);
 int insert_into_leaf_after_splitting(Offset leaf, LeafRecord r);
 int insert_into_new_root(Offset cur_child, Offset new_child);
 int insert_into_parent(Offset node, Offset cur_child, Offset new_child);
-
+int delete(int64_t key);
 
 
 //under here, my funtions
