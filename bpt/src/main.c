@@ -2,7 +2,10 @@
 #include "bpt.h"
 
 // MAIN
-
+void EndHere() {
+	fclose(dbfile);
+	exit(0);
+}
 
 
 int main(int argc, char ** argv) {
@@ -25,22 +28,11 @@ int main(int argc, char ** argv) {
 		printf("debug|scanf : %s\n", cmd);
 		if (strcmp(cmd, "open") == 0) {    //TODO: change into cmd_pre array and switch
 			scanf("%s", file_name);
-			printf("debug|filename : %s\n", file_name);
-			dbfile = fopen(file_name, "r+");
-			if (dbfile == NULL) {
-				dbfile = fopen(file_name, "w+");
-				if (dbfile == NULL) {
-					perror("Failure  open input file.");
-					exit(EXIT_FAILURE);
-				}
-				else {
-					FileInit(dbfile);
-					printf("file not found. opening NEW FILE\n");
-					break;
-				}
+			int err = open_db(file_name);
+			if (err != 0) {
+				printf("open_db(file_path) failed!!");
 			}
 			else {
-				printf("opening EXISTING FILE\n");
 				break;
 			}
 		}
@@ -115,7 +107,7 @@ int main(int argc, char ** argv) {
 			remove(file_name);
 			return 0;
 		case TEST1:
-			{
+			if(debug_enable % 2 == 0){
 				IntrRecord  a[3];
 				IntrRecord *b[3];
 				int i;
@@ -134,40 +126,43 @@ int main(int argc, char ** argv) {
 				SetKeyNum(PAGE_SIZE, 3);
 				break;
 			}
-		case TEST2:
-		{	// mem leaking here!
-			LeafRecord  a[6];
-			LeafRecord *b[6];
-			int i;
-			for (i = 0; i < 3; i++) {
-				a[i].key = i * 5;
-				strcpy(a[i].value, "aaaaaaaaaa");
-				SetLeafRecord(PAGE_SIZE, i, a[i]);
-				b[i] = GetLeafRecordPtr(PAGE_SIZE, i);
-				continue;
-			}
-			i = i;
-			for (i = 3; i < 6; i++) {
-				b[i] = (LeafRecord *)malloc(sizeof(LeafRecord));
-				a[i].key = i * 5;
-				strcpy(a[i].value, "aaaaaaaaaa");
-				//SetLeafRecord(PAGE_SIZE, i, a[i]);
-				SetLeafKey(PAGE_SIZE, i, a[i].key);
-				SetValue(PAGE_SIZE, i, a[i].value);
-				b[i]->key = GetLeafKey(PAGE_SIZE, i);
-				GetLeafValue(PAGE_SIZE, b[i]->value, i);
-				//b[i] = GetLeafRecordPtr(PAGE_SIZE, i);
-				continue;
-			}
-			i = i;
-
-			for (i = 0; i < 6; i++) {
-				b[i] = GetLeafRecordPtr(PAGE_SIZE, i);
-			}
-			i = i;
-			SetKeyNum(PAGE_SIZE,  6);
+			debug_enable = 2;
 			break;
-		}
+		case TEST2:
+			if(debug_enable == 1){	// mem leaking here!
+				LeafRecord  a[6];
+				LeafRecord *b[6];
+				int i;
+				for (i = 0; i < 3; i++) {
+					a[i].key = i * 5;
+					strcpy(a[i].value, "aaaaaaaaaa");
+					SetLeafRecord(PAGE_SIZE, i, a[i]);
+					b[i] = GetLeafRecordPtr(PAGE_SIZE, i);
+					continue;
+				}
+				i = i;
+				for (i = 3; i < 6; i++) {
+					b[i] = (LeafRecord *)malloc(sizeof(LeafRecord));
+					a[i].key = i * 5;
+					strcpy(a[i].value, "aaaaaaaaaa");
+					//SetLeafRecord(PAGE_SIZE, i, a[i]);
+					SetLeafKey(PAGE_SIZE, i, a[i].key);
+					SetValue(PAGE_SIZE, i, a[i].value);
+					b[i]->key = GetLeafKey(PAGE_SIZE, i);
+					GetLeafValue(PAGE_SIZE, b[i]->value, i);
+					//b[i] = GetLeafRecordPtr(PAGE_SIZE, i);
+					continue;
+				}
+				i = i;
+				for (i = 0; i < 6; i++) {
+					b[i] = GetLeafRecordPtr(PAGE_SIZE, i);
+				}
+				i = i;
+				SetKeyNum(PAGE_SIZE,  6);
+				break;
+			}
+			debug_enable = 1;
+			break;
 		default:
 		case OPERATION_COUNT:   //DEFAULT
 			printf("your input : %s\nusage is wrong\n", cmd);
